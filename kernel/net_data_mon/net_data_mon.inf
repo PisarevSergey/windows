@@ -1,0 +1,94 @@
+;
+; net_data_mon.inf
+;
+
+[Version]
+Signature  = "$Windows NT$"
+Class      = "ActivityMonitor"
+ClassGuid  = {b86dff51-a31e-4bac-b3cf-e8cfe75c9fc2}
+Provider   = %ProviderString%
+DriverVer  =
+CatalogFile=net_data_mon.cat
+PnpLockdown=1
+
+
+[DestinationDirs]
+DefaultDestDir          = 13
+NetDataMon.DriverFiles  = 13
+
+;;
+;; Default install sections
+;;
+
+[DefaultInstall.NT$ARCH$]
+OptionDesc  = %ServiceDescription%
+CopyFiles   = NetDataMon.DriverFiles
+
+[DefaultInstall.NT$ARCH$.Services]
+AddService  = %ServiceName%,,NetDataMon.Service
+
+;;
+;; Default uninstall sections
+;;
+
+[DefaultUninstall.NT$ARCH$]
+LegacyUninstall=1
+DelFiles   = NetDataMon.DriverFiles
+
+[DefaultUninstall.NT$ARCH$.Services]
+DelService = %ServiceName%,0x200      ;Ensure service is stopped before deleting
+
+;
+; Services Section
+;
+
+[NetDataMon.Service]
+DisplayName      = %ServiceName%
+Description      = %ServiceDescription%
+ServiceBinary    = %12%\%DriverName%.sys    ;%windir%\system32\drivers\
+Dependencies     = "FltMgr"
+ServiceType      = 2                        ;SERVICE_FILE_SYSTEM_DRIVER
+StartType        = 1                        ;SERVICE_SYSTEM_START
+ErrorControl     = 1                        ;SERVICE_ERROR_NORMAL
+LoadOrderGroup   = "FSFilter Activity Monitor"
+AddReg           = NetDataMon.AddRegistry
+
+;
+; Registry Modifications
+;
+
+[NetDataMon.AddRegistry]
+HKR,,"SupportedFeatures",0x00010001,0x3
+HKR,"Instances","DefaultInstance",0x00000000,%DefaultInstance%
+HKR,"Instances\"%Instance1.Name%,"Altitude",0x00000000,%Instance1.Altitude%
+HKR,"Instances\"%Instance1.Name%,"Flags",0x00010001,%Instance1.Flags%
+
+;
+; Copy Files
+;
+
+[NetDataMon.DriverFiles]
+%DriverName%.sys
+
+[SourceDisksFiles]
+net_data_mon.sys = 1,,
+
+[SourceDisksNames]
+1 = %DiskId1%,,,
+
+;;
+;; String Section
+;;
+
+[Strings]
+ProviderString          = "ps"
+ServiceDescription      = "NetDataMon driver"
+ServiceName             = "net_data_mon"
+DriverName              = "net_data_mon"
+DiskId1                 = "NetDataMon Device Installation Disk"
+
+;Instances specific information.
+DefaultInstance         = "NetDataMon Instance"
+Instance1.Name          = "NetDataMon Instance"
+Instance1.Altitude      = "374074"
+Instance1.Flags         = 0x1          ; Suppress automatic attachments
