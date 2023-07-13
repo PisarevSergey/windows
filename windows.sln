@@ -4,6 +4,14 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.6.33829.357
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "net_data_mon", "kernel\net_data_mon\net_data_mon.vcxproj", "{41EE2AEC-9FA9-4637-9FC2-0B7ABD7B05F4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{0C286A13-25D9-4163-9895-5CB10343F041} = {0C286A13-25D9-4163-9895-5CB10343F041}
+		{A4E7ED26-FAF8-4A50-97BB-F319AC519683} = {A4E7ED26-FAF8-4A50-97BB-F319AC519683}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "nt", "kernel\helpers\nt\nt.vcxproj", "{0C286A13-25D9-4163-9895-5CB10343F041}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "trace_logging", "kernel\helpers\trace_logging\trace_logging.vcxproj", "{A4E7ED26-FAF8-4A50-97BB-F319AC519683}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,6 +25,18 @@ Global
 		{41EE2AEC-9FA9-4637-9FC2-0B7ABD7B05F4}.Release|x64.ActiveCfg = Release|x64
 		{41EE2AEC-9FA9-4637-9FC2-0B7ABD7B05F4}.Release|x64.Build.0 = Release|x64
 		{41EE2AEC-9FA9-4637-9FC2-0B7ABD7B05F4}.Release|x64.Deploy.0 = Release|x64
+		{0C286A13-25D9-4163-9895-5CB10343F041}.Debug|x64.ActiveCfg = Debug|x64
+		{0C286A13-25D9-4163-9895-5CB10343F041}.Debug|x64.Build.0 = Debug|x64
+		{0C286A13-25D9-4163-9895-5CB10343F041}.Debug|x64.Deploy.0 = Debug|x64
+		{0C286A13-25D9-4163-9895-5CB10343F041}.Release|x64.ActiveCfg = Release|x64
+		{0C286A13-25D9-4163-9895-5CB10343F041}.Release|x64.Build.0 = Release|x64
+		{0C286A13-25D9-4163-9895-5CB10343F041}.Release|x64.Deploy.0 = Release|x64
+		{A4E7ED26-FAF8-4A50-97BB-F319AC519683}.Debug|x64.ActiveCfg = Debug|x64
+		{A4E7ED26-FAF8-4A50-97BB-F319AC519683}.Debug|x64.Build.0 = Debug|x64
+		{A4E7ED26-FAF8-4A50-97BB-F319AC519683}.Debug|x64.Deploy.0 = Debug|x64
+		{A4E7ED26-FAF8-4A50-97BB-F319AC519683}.Release|x64.ActiveCfg = Release|x64
+		{A4E7ED26-FAF8-4A50-97BB-F319AC519683}.Release|x64.Build.0 = Release|x64
+		{A4E7ED26-FAF8-4A50-97BB-F319AC519683}.Release|x64.Deploy.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
