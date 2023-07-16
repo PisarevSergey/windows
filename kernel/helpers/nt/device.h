@@ -9,7 +9,7 @@ namespace nt
         void operator()(DEVICE_OBJECT* device) const;
     };
 
-    using AutoDevice = kcpp::auto_ptr<DEVICE_OBJECT>;
+    using AutoDevice = kcpp::auto_ptr<DEVICE_OBJECT, DeviceDeleter>;
 
     AutoDevice CreateDevice(NTSTATUS& status,
         DRIVER_OBJECT& driver,

@@ -1,7 +1,12 @@
 #pragma once
 
-#include <wdm.h>
+#include <flt/minifilter.h>
+#include <nt/device.h>
+#include <trace_logging/trace.h>
 
-#include <helpers/trace_logging/trace.h>
+#include <fwpsk.h>
+#include <fwpmk.h>
 
+#include "flow.h"
+#include "callouts.h"
 #include "driver.h"
