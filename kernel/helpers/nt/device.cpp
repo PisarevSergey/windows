@@ -1,4 +1,6 @@
-#include "pch.h"
+#include "device.h"
+
+#include <trace_logging/trace.h>
 
 void nt::DeviceDeleter::operator()(DEVICE_OBJECT* device) const
 {

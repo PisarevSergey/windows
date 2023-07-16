@@ -1,5 +1,9 @@
 #pragma once
 
+#include <wdm.h>
+
+#include <kcpp/auto_ptr.h>
+
 namespace nt
 {
     template <typename T>
