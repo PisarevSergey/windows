@@ -18,9 +18,15 @@
     <ClInclude Include="minifilter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="communication_port.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="minifilter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="communication_port.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

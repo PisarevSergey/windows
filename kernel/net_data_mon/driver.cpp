@@ -14,6 +14,30 @@ namespace
         return STATUS_SUCCESS;
     }
 
+    NTSTATUS OnConnect([[maybe_unused]] PFLT_PORT ClientPort,
+        [[maybe_unused]] PVOID ServerPortCookie,
+        [[maybe_unused]] PVOID ConnectionContext,
+        [[maybe_unused]] ULONG SizeOfContext,
+        [[maybe_unused]] PVOID* ConnectionPortCookie)
+    {
+        return STATUS_SUCCESS;
+    }
+
+    void OnDisconnect([[maybe_unused]] PVOID ConnectionCookie)
+    {}
+
+    NTSTATUS OnMessageNotify(
+        [[maybe_unused]] PVOID PortCookie,
+        [[maybe_unused]] PVOID InputBuffer OPTIONAL,
+        [[maybe_unused]] ULONG InputBufferLength,
+        [[maybe_unused]] PVOID OutputBuffer OPTIONAL,
+        [[maybe_unused]] ULONG OutputBufferLength,
+        [[maybe_unused]] PULONG ReturnOutputBufferLength
+    )
+    {
+        return STATUS_SUCCESS;
+    }
+
     alignas(Driver) char driverMemory[sizeof(Driver)];
 }
 
@@ -47,6 +71,19 @@ NTSTATUS Driver::Init(DRIVER_OBJECT& driverObject)
             TraceLoggingLevel(WINEVENT_LEVEL_ERROR),
             TraceLoggingNTStatus(status));
 
+        return status;
+    }
+
+    m_serverCommunicationPort = flt::CreateCommunicationPort(status,
+        m_minifilter.get(),
+        LR"(\NetDataMonCommunicationPort)",
+        OnConnect,
+        OnDisconnect,
+        OnMessageNotify,
+        &m_clientCommunicationPort);
+    if (!NT_SUCCESS(status))
+    {
+        TraceLoggingWrite(g_tracer, "failed to create server communication port", TraceLoggingLevel(WINEVENT_LEVEL_ERROR), TraceLoggingNTStatus(status));
         return status;
     }
 

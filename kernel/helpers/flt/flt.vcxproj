@@ -35,9 +35,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="communication_port.h" />
     <ClInclude Include="minifilter.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="communication_port.cpp" />
     <ClCompile Include="minifilter.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

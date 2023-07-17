@@ -1,6 +1,7 @@
 #pragma once
 
 #include <flt/minifilter.h>
+#include <flt/communication_port.h>
 #include <nt/device.h>
 #include <trace_logging/trace.h>
 
