@@ -10,9 +10,7 @@ namespace
     [[nodiscard]]
     NTSTATUS AddSublayer(HANDLE engine, const FWPM_SUBLAYER sublayer)
     {
-        TraceLoggingWrite(g_tracer,
-            "adding sublayer",
-            TraceLoggingLevel(WINEVENT_LEVEL_INFO),
+        TraceInfo("adding sublayer",
             TraceLoggingValue(sublayer.subLayerKey),
             TraceLoggingValue(sublayer.displayData.name),
             TraceLoggingValue(sublayer.displayData.description));
@@ -20,15 +18,13 @@ namespace
         const auto status = FwpmSubLayerAdd(engine, &sublayer, nullptr);
         if (STATUS_SUCCESS != status)
         {
-            TraceLoggingWrite(g_tracer,
-                "FwpmSubLayerAdd failed",
-                TraceLoggingLevel(WINEVENT_LEVEL_ERROR),
+            TraceError("FwpmSubLayerAdd failed",
                 TraceLoggingNTStatus(status));
 
             return status;
         }
 
-        TraceLoggingWrite(g_tracer, "FwpmSubLayerAdd success", TraceLoggingLevel(WINEVENT_LEVEL_INFO));
+        TraceInfo("FwpmSubLayerAdd success");
 
         return STATUS_SUCCESS;
     }
@@ -36,9 +32,7 @@ namespace
     [[nodiscard]]
     NTSTATUS AddCallout(HANDLE engine, const FWPM_CALLOUT& callout)
     {
-        TraceLoggingWrite(g_tracer,
-            "adding callout",
-            TraceLoggingLevel(WINEVENT_LEVEL_INFO),
+        TraceInfo("adding callout",
             TraceLoggingValue(callout.calloutKey),
             TraceLoggingValue(callout.displayData.name),
             TraceLoggingValue(callout.displayData.description),
@@ -48,15 +42,12 @@ namespace
         const auto status = FwpmCalloutAdd(engine, &callout, nullptr, &calloutId);
         if (STATUS_SUCCESS != status)
         {
-            TraceLoggingWrite(g_tracer,
-                "FwpmCalloutAdd failed",
-                TraceLoggingLevel(WINEVENT_LEVEL_ERROR),
-                TraceLoggingNTStatus(status));
+            TraceError("FwpmCalloutAdd failed", TraceLoggingNTStatus(status));
 
             return status;
         }
 
-        TraceLoggingWrite(g_tracer, "FwpmCalloutAdd success", TraceLoggingLevel(WINEVENT_LEVEL_INFO));
+        TraceInfo("FwpmCalloutAdd success");
 
         return STATUS_SUCCESS;
     }
@@ -64,9 +55,7 @@ namespace
     [[nodiscard]]
     NTSTATUS AddFilter(HANDLE engine, const FWPM_FILTER& filter)
     {
-        TraceLoggingWrite(g_tracer,
-            "adding filter",
-            TraceLoggingLevel(WINEVENT_LEVEL_INFO),
+        TraceInfo("adding filter",
             TraceLoggingValue(filter.filterKey),
             TraceLoggingValue(filter.displayData.name),
             TraceLoggingValue(filter.displayData.description));
@@ -75,18 +64,12 @@ namespace
         const auto status = FwpmFilterAdd(engine, &filter, nullptr, &filterId);
         if (STATUS_SUCCESS != status)
         {
-            TraceLoggingWrite(g_tracer,
-                "FwpmFilterAdd failed",
-                TraceLoggingLevel(WINEVENT_LEVEL_ERROR),
-                TraceLoggingNTStatus(status));
+            TraceError("FwpmFilterAdd failed", TraceLoggingNTStatus(status));
 
             return status;
         }
 
-        TraceLoggingWrite(g_tracer,
-            "FwpmFilterAdd success",
-            TraceLoggingLevel(WINEVENT_LEVEL_INFO),
-            TraceLoggingValue(filterId));
+        TraceInfo("FwpmFilterAdd success", TraceLoggingValue(filterId));
 
         return STATUS_SUCCESS;
     }
@@ -126,15 +109,12 @@ namespace
         auto status = FwpmTransactionBegin(engine, 0);
         if (STATUS_SUCCESS != status)
         {
-            TraceLoggingWrite(g_tracer,
-                "FwpmTransactionBegin failed",
-                TraceLoggingLevel(WINEVENT_LEVEL_ERROR),
-                TraceLoggingNTStatus(status));
+            TraceError("FwpmTransactionBegin failed", TraceLoggingNTStatus(status));
 
             return status;
         }
 
-        kcpp::scope_guard transactionAborter{[engine] {FwpmTransactionAbort(engine); } };
+        kcpp::scope_guard transactionAborter{[engine] { FwpmTransactionAbort(engine); } };
 
         status = AddBfeObjects(engine);
         if (STATUS_SUCCESS != status)
@@ -145,17 +125,14 @@ namespace
         status = FwpmTransactionCommit(engine);
         if (STATUS_SUCCESS != status)
         {
-            TraceLoggingWrite(g_tracer,
-                "FwpmTransactionCommit failed",
-                TraceLoggingLevel(WINEVENT_LEVEL_ERROR),
-                TraceLoggingNTStatus(status));
+            TraceError("FwpmTransactionCommit failed", TraceLoggingNTStatus(status));
 
             return status;
         }
 
         transactionAborter.release();
 
-        TraceLoggingWrite(g_tracer, "add objects to BFE success", TraceLoggingLevel(WINEVENT_LEVEL_INFO));
+        TraceInfo("add objects to BFE success");
 
         return STATUS_SUCCESS;
     }
@@ -177,7 +154,7 @@ AutoBfe CreateBfeObjects(NTSTATUS& status)
     {
         static_cast<void>(engine.release());
 
-        TraceLoggingWrite(g_tracer, "FwpmEngineOpen failed", TraceLoggingLevel(WINEVENT_LEVEL_ERROR), TraceLoggingNTStatus(status));
+        TraceError("FwpmEngineOpen failed", TraceLoggingNTStatus(status));
 
         return AutoBfe{};
     }

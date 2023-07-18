@@ -8,7 +8,7 @@ namespace
 {
     NTSTATUS Unload([[maybe_unused]] FLT_FILTER_UNLOAD_FLAGS flags)
     {
-        TraceLoggingWrite(g_tracer, "unloading");
+        TraceInfo("unloading");
         g_driver.~Driver();
 
         return STATUS_SUCCESS;
@@ -56,11 +56,11 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT driverObject, [[maybe_unused]] PU
     const auto status = g_driver.Init(*driverObject);
     if (!NT_SUCCESS(status))
     {
-        TraceLoggingWrite(g_tracer, "driver init failed", TraceLoggingLevel(WINEVENT_LEVEL_ERROR), TraceLoggingNTStatus(status, "error"));
+        TraceError("driver init failed", TraceLoggingNTStatus(status));
         return status;
     }
 
-    TraceLoggingWrite(g_tracer, "driver started", TraceLoggingLevel(WINEVENT_LEVEL_INFO));
+    TraceInfo("driver started");
     driverGuard.release();
     return STATUS_SUCCESS;
 }
@@ -71,10 +71,7 @@ NTSTATUS Driver::Init(DRIVER_OBJECT& driverObject)
     m_minifilter = flt::CreateMinifilter(status, driverObject, Unload);
     if (!NT_SUCCESS(status))
     {
-        TraceLoggingWrite(g_tracer,
-            "CreateMinifilter failed",
-            TraceLoggingLevel(WINEVENT_LEVEL_ERROR),
-            TraceLoggingNTStatus(status));
+        TraceError("CreateMinifilter failed", TraceLoggingNTStatus(status));
 
         return status;
     }
@@ -88,17 +85,14 @@ NTSTATUS Driver::Init(DRIVER_OBJECT& driverObject)
         &m_clientCommunicationPort);
     if (!NT_SUCCESS(status))
     {
-        TraceLoggingWrite(g_tracer, "failed to create server communication port", TraceLoggingLevel(WINEVENT_LEVEL_ERROR), TraceLoggingNTStatus(status));
+        TraceError("failed to create server communication port", TraceLoggingNTStatus(status));
         return status;
     }
 
     m_wfpDevice = nt::CreateDevice(status, driverObject);
     if (!NT_SUCCESS(status))
     {
-        TraceLoggingWrite(g_tracer,
-            "failed to create WFP device",
-            TraceLoggingLevel(WINEVENT_LEVEL_ERROR),
-            TraceLoggingNTStatus(status));
+        TraceError("failed to create WFP device", TraceLoggingNTStatus(status));
 
         return status;
     }
@@ -106,10 +100,7 @@ NTSTATUS Driver::Init(DRIVER_OBJECT& driverObject)
     status = m_callouts.Init(*m_wfpDevice);
     if (!NT_SUCCESS(status))
     {
-        TraceLoggingWrite(g_tracer,
-            "callout initialization failed",
-            TraceLoggingLevel(WINEVENT_LEVEL_ERROR),
-            TraceLoggingNTStatus(status));
+        TraceError("callout initialization failed", TraceLoggingNTStatus(status));
 
         return status;
     }
@@ -117,17 +108,17 @@ NTSTATUS Driver::Init(DRIVER_OBJECT& driverObject)
     m_bfe = CreateBfeObjects(status);
     if (STATUS_SUCCESS != status)
     {
-        TraceLoggingWrite(g_tracer, "CreateBfeObjects failed", TraceLoggingLevel(WINEVENT_LEVEL_ERROR), TraceLoggingNTStatus(status));
+        TraceError("CreateBfeObjects failed", TraceLoggingNTStatus(status));
         return status;
     }
 
-    TraceLoggingWrite(g_tracer, "driver init success", TraceLoggingLevel(WINEVENT_LEVEL_INFO));
+    TraceInfo("driver init success");
     return STATUS_SUCCESS;
 }
 
 NTSTATUS ClientCommunicationPort::OnConnect(PFLT_PORT clientPort)
 {
-    TraceLoggingWrite(g_tracer, "client port connect");
+    TraceInfo("client port connect");
 
     NT_ASSERT(m_filter.get());
 
@@ -137,7 +128,7 @@ NTSTATUS ClientCommunicationPort::OnConnect(PFLT_PORT clientPort)
 
 void ClientCommunicationPort::OnDisconnect()
 {
-    TraceLoggingWrite(g_tracer, "client port disconnect", TraceLoggingLevel(WINEVENT_LEVEL_INFO));
+    TraceInfo("client port disconnect");
 
     NT_ASSERT(m_filter.get());
     FltCloseClientPort(m_filter.get(), &m_port);
