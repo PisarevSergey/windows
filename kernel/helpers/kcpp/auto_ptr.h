@@ -79,7 +79,7 @@ namespace kcpp
         explicit auto_ptr(T* ptr = nullptr) : base{ ptr }
         {}
 
-        auto_ptr(auto_ptr&& rhs) noexcept : base{ rhs }
+        auto_ptr(auto_ptr&& rhs) noexcept : base{ static_cast<auto_ptr&&>(rhs) }
         {}
 
         auto_ptr& operator=(auto_ptr&& rhs) noexcept
@@ -109,7 +109,7 @@ namespace kcpp
             return *this;
         }
 
-        auto_ptr(auto_ptr&& rhs) noexcept : base{ rhs }
+        auto_ptr(auto_ptr&& rhs) noexcept : base{ static_cast<auto_ptr&&>(rhs) }
         {}
     };
 }
