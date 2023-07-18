@@ -10,4 +10,5 @@
 
 #include "flow.h"
 #include "callouts.h"
+#include "bfe_registration.h"
 #include "driver.h"

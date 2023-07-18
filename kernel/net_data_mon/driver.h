@@ -45,6 +45,7 @@ private:
     ClientCommunicationPort m_clientCommunicationPort{m_minifilter};
     nt::AutoDevice m_wfpDevice;
     Callouts m_callouts;
+    AutoBfe m_bfe;
 };
 
 extern Driver& g_driver;

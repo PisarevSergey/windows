@@ -114,6 +114,13 @@ NTSTATUS Driver::Init(DRIVER_OBJECT& driverObject)
         return status;
     }
 
+    m_bfe = CreateBfeObjects(status);
+    if (STATUS_SUCCESS != status)
+    {
+        TraceLoggingWrite(g_tracer, "CreateBfeObjects failed", TraceLoggingLevel(WINEVENT_LEVEL_ERROR), TraceLoggingNTStatus(status));
+        return status;
+    }
+
     TraceLoggingWrite(g_tracer, "driver init success", TraceLoggingLevel(WINEVENT_LEVEL_INFO));
     return STATUS_SUCCESS;
 }
