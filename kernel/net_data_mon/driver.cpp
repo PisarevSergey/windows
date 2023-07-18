@@ -14,28 +14,33 @@ namespace
         return STATUS_SUCCESS;
     }
 
-    NTSTATUS OnConnect([[maybe_unused]] PFLT_PORT ClientPort,
-        [[maybe_unused]] PVOID ServerPortCookie,
+    NTSTATUS OnConnect(PFLT_PORT ClientPort,
+        PVOID ServerPortCookie,
         [[maybe_unused]] PVOID ConnectionContext,
         [[maybe_unused]] ULONG SizeOfContext,
-        [[maybe_unused]] PVOID* ConnectionPortCookie)
+        PVOID* ConnectionPortCookie)
     {
-        return STATUS_SUCCESS;
+        auto clientCommunicationPort = static_cast<ClientCommunicationPort*>(ServerPortCookie);
+        *ConnectionPortCookie = clientCommunicationPort;
+
+        return clientCommunicationPort->OnConnect(ClientPort);
     }
 
-    void OnDisconnect([[maybe_unused]] PVOID ConnectionCookie)
-    {}
-
-    NTSTATUS OnMessageNotify(
-        [[maybe_unused]] PVOID PortCookie,
-        [[maybe_unused]] PVOID InputBuffer OPTIONAL,
-        [[maybe_unused]] ULONG InputBufferLength,
-        [[maybe_unused]] PVOID OutputBuffer OPTIONAL,
-        [[maybe_unused]] ULONG OutputBufferLength,
-        [[maybe_unused]] PULONG ReturnOutputBufferLength
-    )
+    void OnDisconnect(PVOID ConnectionCookie)
     {
-        return STATUS_SUCCESS;
+        auto clientCommunicationPort = static_cast<ClientCommunicationPort*>(ConnectionCookie);
+        clientCommunicationPort->OnDisconnect();
+    }
+
+    NTSTATUS OnMessageNotify(PVOID PortCookie,
+        PVOID InputBuffer OPTIONAL,
+        ULONG InputBufferLength,
+        PVOID OutputBuffer OPTIONAL,
+        ULONG OutputBufferLength,
+        PULONG ReturnOutputBufferLength)
+    {
+        auto clientCommunicationPort = static_cast<ClientCommunicationPort*>(PortCookie);
+        return clientCommunicationPort->OnMessageNotify(InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, *ReturnOutputBufferLength);
     }
 
     alignas(Driver) char driverMemory[sizeof(Driver)];
@@ -111,4 +116,41 @@ NTSTATUS Driver::Init(DRIVER_OBJECT& driverObject)
 
     TraceLoggingWrite(g_tracer, "driver init success", TraceLoggingLevel(WINEVENT_LEVEL_INFO));
     return STATUS_SUCCESS;
+}
+
+NTSTATUS ClientCommunicationPort::OnConnect(PFLT_PORT clientPort)
+{
+    TraceLoggingWrite(g_tracer, "client port connect");
+
+    NT_ASSERT(m_filter.get());
+
+    m_port = clientPort;
+    return STATUS_SUCCESS;
+}
+
+void ClientCommunicationPort::OnDisconnect()
+{
+    TraceLoggingWrite(g_tracer, "client port disconnect", TraceLoggingLevel(WINEVENT_LEVEL_INFO));
+
+    NT_ASSERT(m_filter.get());
+    FltCloseClientPort(m_filter.get(), &m_port);
+}
+
+NTSTATUS ClientCommunicationPort::SendMessage(void* senderBuffer,
+    ULONG senderBufferSize,
+    PLARGE_INTEGER timeout,
+    void* replyBuffer,
+    PULONG replyBufferSize)
+{
+    return FltSendMessage(m_filter.get(), &m_port, senderBuffer, senderBufferSize, replyBuffer, replyBufferSize, timeout);
+}
+
+NTSTATUS ClientCommunicationPort::OnMessageNotify([[maybe_unused]] PVOID InputBuffer OPTIONAL,
+    [[maybe_unused]] ULONG InputBufferLength,
+    [[maybe_unused]]  PVOID OutputBuffer OPTIONAL,
+    [[maybe_unused]] ULONG OutputBufferLength,
+    ULONG& ReturnOutputBufferLength)
+{
+    ReturnOutputBufferLength = 0;
+    return STATUS_NOT_IMPLEMENTED;
 }
