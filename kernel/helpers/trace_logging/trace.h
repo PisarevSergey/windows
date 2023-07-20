@@ -23,5 +23,8 @@ struct Tracer final
 #define TraceError(eventName, ...) \
     Trace(WINEVENT_LEVEL_ERROR, eventName, __VA_ARGS__)
 
+#define TraceWarning(eventName, ...) \
+    Trace(WINEVENT_LEVEL_WARNING, eventName, __VA_ARGS__)
+
 #define TraceCritical(eventName, ...) \
     Trace(WINEVENT_LEVEL_CRITICAL, eventName, __VA_ARGS__)
