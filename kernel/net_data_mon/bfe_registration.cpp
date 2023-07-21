@@ -167,3 +167,43 @@ AutoBfe CreateBfeObjects(NTSTATUS& status)
 
     return engine;
 }
+
+void BfeChangeHandleReleaser::operator()(HANDLE changeHandle) const
+{
+    const auto status = FwpmBfeStateUnsubscribeChanges(changeHandle);
+    if (STATUS_SUCCESS == status)
+    {
+        TraceInfo("FwpmBfeStateUnsubscribeChanges success");
+    }
+    else
+    {
+        TraceCritical("FwpmBfeStateUnsubscribeChanges failed", TraceLoggingNTStatus(status));
+    }
+
+    NT_ASSERT(STATUS_SUCCESS == status);
+}
+
+NTSTATUS BfeStateSubscriber::Init(void* deviceObject, FWPM_SERVICE_STATE_CHANGE_CALLBACK0 callback, void* context)
+{
+    HANDLE changeHandle{};
+    const auto status = FwpmBfeStateSubscribeChanges(deviceObject, callback, context, &changeHandle);
+    if (STATUS_SUCCESS != status)
+    {
+        TraceError("FwpmBfeStateSubscribeChanges failed", TraceLoggingNTStatus(status));
+        return status;
+    }
+
+    m_changeHandle.reset(changeHandle);
+    return STATUS_SUCCESS;
+}
+
+void BfeCloser::operator()(HANDLE h) const
+{
+    const auto status = FwpmEngineClose(h);
+    if (STATUS_SUCCESS != status)
+    {
+        TraceCritical("FwpmEngineClose failed", TraceLoggingNTStatus(status));
+    }
+
+    NT_ASSERT(STATUS_SUCCESS == status);
+}

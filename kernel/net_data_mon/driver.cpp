@@ -43,6 +43,34 @@ namespace
         return clientCommunicationPort->OnMessageNotify(InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, *ReturnOutputBufferLength);
     }
 
+    void NTAPI BfeStateChangeCallback([[maybe_unused]] void* context, FWPM_SERVICE_STATE  newState)
+    {
+        auto bfeHandle = static_cast<AutoBfe*>(context);
+
+        switch (newState)
+        {
+        case FWPM_SERVICE_RUNNING:
+        {
+            NTSTATUS status{};
+            *bfeHandle = CreateBfeObjects(status);
+            if (STATUS_SUCCESS == status)
+            {
+                TraceInfo("CreateBfeObjects success");
+            }
+            else
+            {
+                TraceError("CreateBfeObjects failed", TraceLoggingNTStatus(status));
+            }
+
+        }
+            break;
+        case FWPM_SERVICE_STOP_PENDING:
+            TraceInfo("BFE stopping");
+            bfeHandle->reset();
+            break;
+        }
+    }
+
     alignas(Driver) char driverMemory[sizeof(Driver)];
 }
 
@@ -98,17 +126,17 @@ NTSTATUS Driver::Init(DRIVER_OBJECT& driverObject)
     }
 
     status = m_callouts.Init(*m_wfpDevice);
-    if (!NT_SUCCESS(status))
+    if (STATUS_SUCCESS != status)
     {
         TraceError("callout initialization failed", TraceLoggingNTStatus(status));
 
         return status;
     }
 
-    m_bfe = CreateBfeObjects(status);
+    status = m_bfeStateSubscriber.Init(m_wfpDevice.get(), BfeStateChangeCallback, &m_bfe);
     if (STATUS_SUCCESS != status)
     {
-        TraceError("CreateBfeObjects failed", TraceLoggingNTStatus(status));
+        TraceError("failed to subscribe to BFE state change", TraceLoggingNTStatus(status));
         return status;
     }
 

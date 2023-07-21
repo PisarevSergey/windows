@@ -46,6 +46,7 @@ private:
     nt::AutoDevice m_wfpDevice;
     Callouts m_callouts;
     AutoBfe m_bfe;
+    BfeStateSubscriber m_bfeStateSubscriber;
 };
 
 extern Driver& g_driver;
