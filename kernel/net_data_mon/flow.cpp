@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include <wfp/classify_decode.h>
+
 namespace flow
 {
     namespace v4
@@ -37,6 +39,15 @@ namespace flow
             {
                 TraceWarning("no user");
             }
+
+            NTSTATUS status{};
+            const auto v = wfp::GetValue<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS>(status, *inFixedValues);
+            if (!NT_SUCCESS(status))
+            {
+                TraceError("failed to get local address", TraceLoggingNTStatus(status));
+                return;
+            }
+            TraceInfo("local address", TraceLoggingIPv4Address(v, "local address"));
         }
 
         NTSTATUS notify(FWPS_CALLOUT_NOTIFY_TYPE notifyType,
