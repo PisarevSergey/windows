@@ -14,6 +14,12 @@ namespace wfp
     };
 
     template<>
+    struct ValueType<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_ADDRESS>
+    {
+        using type = UINT32;
+    };
+
+    template<>
     struct ValueType<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_APP_ID>
     {
         using type = FWP_BYTE_BLOB*;
@@ -31,7 +37,25 @@ namespace wfp
         using type = UINT8;
     };
 
-    consteval auto TypeForField(FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4 field)
+    template<>
+    struct ValueType<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_DESTINATION_ADDRESS_TYPE>
+    {
+        using type = UINT8;
+    };
+
+    template<>
+    struct ValueType<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_PORT>
+    {
+        using type = UINT16;
+    };
+
+    template<>
+    struct ValueType<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_PORT>
+    {
+        using type = UINT16;
+    };
+
+    consteval auto TypeForField(auto field)
     {
         switch (field)
         {
@@ -40,9 +64,14 @@ namespace wfp
         case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_USER_ID:
             return FWP_TOKEN_ACCESS_INFORMATION_TYPE;
         case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS:
+        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_ADDRESS:
             return FWP_UINT32;
         case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS_TYPE:
+        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_DESTINATION_ADDRESS_TYPE:
             return FWP_UINT8;
+        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_PORT:
+        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_PORT:
+            return FWP_UINT16;
         }
     }
 
