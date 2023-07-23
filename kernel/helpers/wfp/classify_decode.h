@@ -13,6 +13,24 @@ namespace wfp
         using type = UINT32;
     };
 
+    template<>
+    struct ValueType<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_APP_ID>
+    {
+        using type = FWP_BYTE_BLOB*;
+    };
+
+    template<>
+    struct ValueType<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_USER_ID>
+    {
+        using type = FWP_BYTE_BLOB*;
+    };
+
+    template<>
+    struct ValueType<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS_TYPE>
+    {
+        using type = UINT8;
+    };
+
     consteval auto TypeForField(FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4 field)
     {
         switch (field)
@@ -23,6 +41,8 @@ namespace wfp
             return FWP_TOKEN_ACCESS_INFORMATION_TYPE;
         case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS:
             return FWP_UINT32;
+        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS_TYPE:
+            return FWP_UINT8;
         }
     }
 
@@ -32,6 +52,12 @@ namespace wfp
         using VT = ValueType<fieldType>::type;
 
         if (FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4 != values.layerId)
+        {
+            status = STATUS_INVALID_PARAMETER;
+            return VT{};
+        }
+
+        if (values.incomingValue[fieldType].value.type != TypeForField(fieldType))
         {
             status = STATUS_INVALID_PARAMETER;
             return VT{};

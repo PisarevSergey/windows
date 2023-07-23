@@ -14,40 +14,32 @@ namespace flow
             [[maybe_unused]] UINT64 flowContext,
             [[maybe_unused]] FWPS_CLASSIFY_OUT0* classifyOut)
         {
-            const auto* fixedValues = inFixedValues->incomingValue;
-
-            const auto& appPathValue = fixedValues[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_APP_ID].value;
-            if (appPathValue.type == FWP_BYTE_BLOB_TYPE)
-            {
-                const auto& appPathBlob = *appPathValue.byteBlob;
-                TraceInfo("app path", TraceLoggingWideString(reinterpret_cast<const wchar_t*>(appPathBlob.data), "app path"));
-            }
-            else
-            {
-                TraceWarning("no app path");
-            }
-
-            const auto& localUserValue = fixedValues[FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_USER_ID].value;
-            if (localUserValue.type == FWP_TOKEN_ACCESS_INFORMATION_TYPE)
-            {
-                const auto& localUserBlob = localUserValue.byteBlob;
-                const auto* accessToken = reinterpret_cast<TOKEN_ACCESS_INFORMATION*>(localUserBlob->data);
-                const auto& sidHash = *accessToken->SidHash;
-                TraceInfo("user", TraceLoggingSid(static_cast<SID*>(sidHash.SidAttr->Sid), "user"));
-            }
-            else
-            {
-                TraceWarning("no user");
-            }
-
             NTSTATUS status{};
-            const auto v = wfp::GetValue<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS>(status, *inFixedValues);
+            const auto* appPathBlob = wfp::GetValue<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_APP_ID>(status, *inFixedValues);
+            if (!NT_SUCCESS(status))
+            {
+                TraceError("failed to get app path", TraceLoggingNTStatus(status));
+                return;
+            }
+            TraceInfo("app path", TraceLoggingWideString(reinterpret_cast<const wchar_t*>(appPathBlob->data), "app path"));
+
+            const auto* localUserBlob = wfp::GetValue<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_USER_ID>(status, *inFixedValues);
+            if (!NT_SUCCESS(status))
+            {
+                TraceError("failed to get user", TraceLoggingNTStatus(status));
+                return;
+            }
+            const auto* accessToken = reinterpret_cast<TOKEN_ACCESS_INFORMATION*>(localUserBlob->data);
+            const auto& sidHash = *accessToken->SidHash;
+            TraceInfo("user", TraceLoggingSid(static_cast<SID*>(sidHash.SidAttr->Sid), "user"));
+
+            const auto localAddress = RtlUlongByteSwap(wfp::GetValue<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS>(status, *inFixedValues));
             if (!NT_SUCCESS(status))
             {
                 TraceError("failed to get local address", TraceLoggingNTStatus(status));
                 return;
             }
-            TraceInfo("local address", TraceLoggingIPv4Address(v, "local address"));
+            TraceInfo("local address", TraceLoggingIPv4Address(localAddress, "local address"));
         }
 
         NTSTATUS notify(FWPS_CALLOUT_NOTIFY_TYPE notifyType,
