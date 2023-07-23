@@ -35,7 +35,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="classify_decode.h" />
+    <ClInclude Include="flow_v4_decode.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E6A27710-3C69-41EB-B969-FF256F5EDB71}</ProjectGuid>

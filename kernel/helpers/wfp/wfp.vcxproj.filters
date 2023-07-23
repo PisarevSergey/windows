@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="classify_decode.h">
+    <ClInclude Include="flow_v4_decode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -30,13 +30,16 @@
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="flow.cpp">
+    <ClCompile Include="flow_v4.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="callouts.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="bfe_registration.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flow_v6.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,13 +50,16 @@
     <ClInclude Include="driver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="flow.h">
+    <ClInclude Include="flow_v4.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="callouts.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="bfe_registration.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flow_v6.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
