@@ -18,5 +18,11 @@
     <ClInclude Include="flow_v4_decode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="in_fixed_values_decode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flow_v6_decode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

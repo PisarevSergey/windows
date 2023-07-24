@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include <wfp/in_fixed_values_decode.h>
+
 namespace flow
 {
     namespace v6
@@ -12,9 +14,9 @@ namespace flow
             [[maybe_unused]] UINT64 flowContext,
             [[maybe_unused]] FWPS_CLASSIFY_OUT0* classifyOut)
         {
-            //NTSTATUS status{};
-            //const auto* appPathBlob = GetValue<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_ALE_APP_ID>(status, *inFixedValues);
-            //static_cast<void>(appPathBlob);
+            NTSTATUS status{};
+            const auto* appPathBlob = GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_ALE_APP_ID, inFixedValues);
+            static_cast<void>(appPathBlob);
         }
 
         NTSTATUS notify([[maybe_unused]] FWPS_CALLOUT_NOTIFY_TYPE notifyType,

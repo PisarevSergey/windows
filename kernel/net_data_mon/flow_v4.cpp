@@ -1,8 +1,6 @@
 #include "pch.h"
 
-#include <wfp/flow_v4_decode.h>
-
-using wfp::flow_v4_decode::GetValue;
+#include <wfp/in_fixed_values_decode.h>
 
 void flow::v4::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
     [[maybe_unused]] const FWPS_INCOMING_METADATA_VALUES0* inMetaValues,
