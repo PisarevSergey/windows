@@ -13,7 +13,7 @@ void flow::v4::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
     [[maybe_unused]] FWPS_CLASSIFY_OUT0* classifyOut)
 {
     NTSTATUS status{};
-    const auto* appPathBlob = GetValue<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_APP_ID>(status, *inFixedValues);
+    const auto* appPathBlob =  GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_APP_ID, inFixedValues);
     if (!NT_SUCCESS(status))
     {
         TraceError("failed to get app path", TraceLoggingNTStatus(status));
@@ -21,7 +21,7 @@ void flow::v4::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
     }
     TraceInfo("app path", TraceLoggingWideString(reinterpret_cast<const wchar_t*>(appPathBlob->data), "app path"));
 
-    const auto* localUserBlob = GetValue<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_USER_ID>(status, *inFixedValues);
+    const auto* localUserBlob = GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_USER_ID, inFixedValues);
     if (!NT_SUCCESS(status))
     {
         TraceError("failed to get user", TraceLoggingNTStatus(status));
@@ -31,7 +31,7 @@ void flow::v4::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
     const auto& sidHash = *accessToken->SidHash;
     TraceInfo("user", TraceLoggingSid(static_cast<SID*>(sidHash.SidAttr->Sid), "user"));
 
-    const auto localAddress = RtlUlongByteSwap(GetValue<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS>(status, *inFixedValues));
+    const auto localAddress = RtlUlongByteSwap(GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS, inFixedValues));
     if (!NT_SUCCESS(status))
     {
         TraceError("failed to get local address", TraceLoggingNTStatus(status));
@@ -39,7 +39,7 @@ void flow::v4::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
     }
     TraceInfo("local address", TraceLoggingIPv4Address(localAddress, "local address"));
 
-    const auto localPort = RtlUshortByteSwap(GetValue<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_PORT>(status, *inFixedValues));
+    const auto localPort = RtlUshortByteSwap(GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_PORT, inFixedValues));
     if (!NT_SUCCESS(status))
     {
         TraceError("failed to get local port", TraceLoggingNTStatus(status));
@@ -47,7 +47,7 @@ void flow::v4::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
     }
     TraceInfo("local port", TraceLoggingPort(localPort, "local port"));
 
-    const auto remoteAddress = RtlUlongByteSwap(GetValue<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_ADDRESS>(status, *inFixedValues));
+    const auto remoteAddress = RtlUlongByteSwap(GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_ADDRESS, inFixedValues));
     if (!NT_SUCCESS(status))
     {
         TraceError("failed to get remote address", TraceLoggingNTStatus(status));
@@ -55,7 +55,7 @@ void flow::v4::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
     }
     TraceInfo("remote address", TraceLoggingIPv4Address(remoteAddress, "remote address"));
 
-    const auto remotePort = RtlUshortByteSwap(GetValue<FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_PORT>(status, *inFixedValues));
+    const auto remotePort = RtlUshortByteSwap(GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_PORT, inFixedValues));
     if (!NT_SUCCESS(status))
     {
         TraceError("failed to get remote port", TraceLoggingNTStatus(status));

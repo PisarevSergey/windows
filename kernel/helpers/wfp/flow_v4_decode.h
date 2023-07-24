@@ -77,33 +77,41 @@ namespace wfp
             }
         }
 
-        template <FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4 fieldType>
+        template<typename FieldIdType>
+        consteval UINT16 LayerId();
+
+        template<>
+        consteval UINT16 LayerId<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4>() { return FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4;}
+
+        template <typename DataFieldsEnum, DataFieldsEnum fieldId>
         auto GetValue(NTSTATUS& status, const FWPS_INCOMING_VALUES& values)
         {
-            using VT = ValueType<fieldType>::type;
+            using VT = ValueType<fieldId>::type;
 
-            if (FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4 != values.layerId)
+            if (LayerId<decltype(fieldId)>() != values.layerId)
             {
                 status = STATUS_INVALID_PARAMETER;
                 return VT{};
             }
 
-            if (values.incomingValue[fieldType].value.type != TypeForField(fieldType))
+            if (values.incomingValue[fieldId].value.type != TypeForField(fieldId))
             {
                 status = STATUS_INVALID_PARAMETER;
                 return VT{};
             }
 
-            if (fieldType >= values.valueCount)
+            if (fieldId >= values.valueCount)
             {
                 status = STATUS_INVALID_PARAMETER;
                 return VT{};
             }
 
             VT resultValue{};
-            RtlCopyMemory(&resultValue, &values.incomingValue[fieldType].value.uint8, sizeof(resultValue));
+            RtlCopyMemory(&resultValue, &values.incomingValue[fieldId].value.uint8, sizeof(resultValue));
             status = STATUS_SUCCESS;
             return resultValue;
         }
     }
 }
+
+#define GET_VALUE(status, fieldId, inFixedValues) GetValue<decltype(fieldId), fieldId>(status, *inFixedValues)
