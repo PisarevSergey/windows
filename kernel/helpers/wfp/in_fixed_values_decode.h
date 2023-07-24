@@ -1,28 +1,5 @@
 #pragma once
 
-namespace
-{
-    consteval auto TypeForField(auto field)
-    {
-        switch (field)
-        {
-        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_APP_ID:
-            return FWP_BYTE_BLOB_TYPE;
-        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_USER_ID:
-            return FWP_TOKEN_ACCESS_INFORMATION_TYPE;
-        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS:
-        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_ADDRESS:
-            return FWP_UINT32;
-        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS_TYPE:
-        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_DESTINATION_ADDRESS_TYPE:
-            return FWP_UINT8;
-        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_PORT:
-        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_PORT:
-            return FWP_UINT16;
-        }
-    }
-}
-
 namespace wfp::decode
 {
     template <typename DataFieldsEnum, DataFieldsEnum fieldType>
@@ -30,6 +7,9 @@ namespace wfp::decode
 
     template<typename FieldIdType>
     consteval UINT16 LayerId();
+
+    consteval FWP_DATA_TYPE TypeForField(FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4 field);
+    consteval FWP_DATA_TYPE TypeForField(FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V6 field);
 
     template <typename DataFieldsEnum, DataFieldsEnum fieldId>
     auto GetValue(NTSTATUS& status, const FWPS_INCOMING_VALUES& values)

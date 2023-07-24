@@ -60,6 +60,14 @@ void flow::v4::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
         return;
     }
     TraceInfo("remote port", TraceLoggingPort(remotePort, "remote port"));
+
+    const auto* fqbnAppPathBlob = GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_SECURITY_ATTRIBUTE_FQBN_VALUE, inFixedValues);
+    if (!NT_SUCCESS(status))
+    {
+        TraceError("failed to get FQBN app path", TraceLoggingNTStatus(status));
+        return;
+    }
+    TraceInfo("FQBN app path", TraceLoggingWideString(reinterpret_cast<const wchar_t*>(fqbnAppPathBlob->data), "FQBN app path"));
 }
 
 NTSTATUS flow::v4::notify(FWPS_CALLOUT_NOTIFY_TYPE notifyType,
