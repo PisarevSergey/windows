@@ -1,8 +1,5 @@
 #pragma once
 
-#include "flow_v4_decode.h"
-#include "flow_v6_decode.h"
-
 namespace
 {
     consteval auto TypeForField(auto field)
@@ -24,15 +21,6 @@ namespace
             return FWP_UINT16;
         }
     }
-
-    template<typename FieldIdType>
-    consteval UINT16 LayerId();
-
-    template<>
-    consteval UINT16 LayerId<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4>() { return FWPS_LAYER_ALE_FLOW_ESTABLISHED_V4; }
-
-    template<>
-    consteval UINT16 LayerId<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V6>() { return FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6; }
 }
 
 namespace wfp::decode
@@ -40,60 +28,8 @@ namespace wfp::decode
     template <typename DataFieldsEnum, DataFieldsEnum fieldType>
     struct ValueType;
 
-    template<>
-    struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS>
-    {
-        using type = UINT32;
-    };
-
-    template<>
-    struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_ADDRESS>
-    {
-        using type = UINT32;
-    };
-
-    template<>
-    struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_APP_ID>
-    {
-        using type = FWP_BYTE_BLOB*;
-    };
-
-    template<>
-    struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_USER_ID>
-    {
-        using type = FWP_BYTE_BLOB*;
-    };
-
-    template<>
-    struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS_TYPE>
-    {
-        using type = UINT8;
-    };
-
-    template<>
-    struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_DESTINATION_ADDRESS_TYPE>
-    {
-        using type = UINT8;
-    };
-
-    template<>
-    struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_PORT>
-    {
-        using type = UINT16;
-    };
-
-    template<>
-    struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_PORT>
-    {
-        using type = UINT16;
-    };
-
-
-    template<>
-    struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V6, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_ALE_APP_ID>
-    {
-        using type = FWP_BYTE_BLOB*;
-    };
+    template<typename FieldIdType>
+    consteval UINT16 LayerId();
 
     template <typename DataFieldsEnum, DataFieldsEnum fieldId>
     auto GetValue(NTSTATUS& status, const FWPS_INCOMING_VALUES& values)

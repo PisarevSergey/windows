@@ -1,10 +1,15 @@
 #pragma once
 
+#include "in_fixed_values_decode.h"
+
 namespace wfp::decode
 {
-    //template<>
-    //struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V6, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_ALE_APP_ID>
-    //{
-    //    using type = FWP_BYTE_BLOB*;
-    //};
+    template<>
+    struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V6, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V6_ALE_APP_ID>
+    {
+        using type = FWP_BYTE_BLOB*;
+    };
+
+    template<>
+    consteval UINT16 LayerId<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V6>() { return FWPS_LAYER_ALE_FLOW_ESTABLISHED_V6; }
 }
