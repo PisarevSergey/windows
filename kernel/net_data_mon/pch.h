@@ -4,6 +4,7 @@
 #include <flt/communication_port.h>
 #include <nt/device.h>
 #include <trace_logging/trace.h>
+#include <wfp/util.h>
 
 #include <fwpsk.h>
 #include <fwpmk.h>

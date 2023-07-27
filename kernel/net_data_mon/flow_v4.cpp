@@ -10,6 +10,8 @@ void flow::v4::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
     [[maybe_unused]] UINT64 flowContext,
     [[maybe_unused]] FWPS_CLASSIFY_OUT0* classifyOut)
 {
+    using namespace wfp::util;
+
     NTSTATUS status{};
     const auto* appPathBlob =  GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_APP_ID, inFixedValues);
     if (!NT_SUCCESS(status))
@@ -37,6 +39,14 @@ void flow::v4::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
     }
     TraceInfo("local address", TraceLoggingIPv4Address(localAddress, "local address"));
 
+    const auto localAddressType = NL_ADDRESS_TYPE(GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS_TYPE, inFixedValues));
+    if (!NT_SUCCESS(status))
+    {
+        TraceError("failed to get local address type", TraceLoggingNTStatus(status));
+        return;
+    }
+    TraceInfo("local address type", TraceLoggingUnicodeString(&AddressTypeToString(localAddressType), "local address type"));
+
     const auto localPort = RtlUshortByteSwap(GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_PORT, inFixedValues));
     if (!NT_SUCCESS(status))
     {
@@ -61,13 +71,30 @@ void flow::v4::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
     }
     TraceInfo("remote port", TraceLoggingPort(remotePort, "remote port"));
 
-    const auto* fqbnAppPathBlob = GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_SECURITY_ATTRIBUTE_FQBN_VALUE, inFixedValues);
+    const auto destinationAddressType = NL_ADDRESS_TYPE(GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_DESTINATION_ADDRESS_TYPE, inFixedValues));
     if (!NT_SUCCESS(status))
     {
-        TraceError("failed to get FQBN app path", TraceLoggingNTStatus(status));
+        TraceError("failed to get destination address type", TraceLoggingNTStatus(status));
         return;
     }
-    TraceInfo("FQBN app path", TraceLoggingWideString(reinterpret_cast<const wchar_t*>(fqbnAppPathBlob->data), "FQBN app path"));
+    TraceInfo("destination address type", TraceLoggingUnicodeString(&AddressTypeToString(destinationAddressType), "destination address type"));
+
+    const auto* localInterfaceLuid = GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_INTERFACE, inFixedValues);
+    if (!NT_SUCCESS(status))
+    {
+        TraceError("failed to get iface LUID", TraceLoggingNTStatus(status));
+        return;
+    }
+    NT_ASSERT(localInterfaceLuid);
+    TraceInfo("local interface LUID", TraceLoggingValue(*localInterfaceLuid, "local interface LUID"));
+
+    const auto direction = FWP_DIRECTION(GET_VALUE(status, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_DIRECTION, inFixedValues));
+    if (!NT_SUCCESS(status))
+    {
+        TraceError("failed to get direction", TraceLoggingNTStatus(status));
+        return;
+    }
+    TraceInfo("direction", TraceLoggingUnicodeString(&DirectionToString(direction), "direction"));
 }
 
 NTSTATUS flow::v4::notify(FWPS_CALLOUT_NOTIFY_TYPE notifyType,

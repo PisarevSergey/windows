@@ -53,6 +53,18 @@ namespace wfp::decode
     };
 
     template<>
+    struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_INTERFACE>
+    {
+        using type = UINT64*;
+    };
+
+    template<>
+    struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_DIRECTION>
+    {
+        using type = UINT32;
+    };
+
+    template<>
     struct ValueType<FWPS_FIELDS_ALE_FLOW_ESTABLISHED_V4, FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_ALE_SECURITY_ATTRIBUTE_FQBN_VALUE>
     {
         using type = FWP_BYTE_BLOB*;
@@ -72,6 +84,7 @@ namespace wfp::decode
             return FWP_TOKEN_ACCESS_INFORMATION_TYPE;
         case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS:
         case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_ADDRESS:
+        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_DIRECTION:
             return FWP_UINT32;
         case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_ADDRESS_TYPE:
         case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_DESTINATION_ADDRESS_TYPE:
@@ -79,6 +92,8 @@ namespace wfp::decode
         case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_PORT:
         case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_REMOTE_PORT:
             return FWP_UINT16;
+        case FWPS_FIELD_ALE_FLOW_ESTABLISHED_V4_IP_LOCAL_INTERFACE:
+            return FWP_UINT64;
         }
     }
 }
