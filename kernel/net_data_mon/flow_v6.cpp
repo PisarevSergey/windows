@@ -91,9 +91,23 @@ void flow::v6::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
     TraceInfo("direction", TraceLoggingUnicodeString(&DirectionToString(direction), "direction"));
 }
 
-NTSTATUS flow::v6::notify([[maybe_unused]] FWPS_CALLOUT_NOTIFY_TYPE notifyType,
-    [[maybe_unused]] const GUID* filterKey,
-    [[maybe_unused]] FWPS_FILTER3* filter)
+NTSTATUS flow::v6::notify(FWPS_CALLOUT_NOTIFY_TYPE notifyType,
+    const GUID* filterKey,
+    FWPS_FILTER3* filter)
 {
+    switch (notifyType)
+    {
+    case FWPS_CALLOUT_NOTIFY_ADD_FILTER:
+        NT_ASSERT(filterKey);
+        TraceInfo("adding filter", TraceLoggingValue(*filterKey, "filter GUID"));
+        break;
+    case FWPS_CALLOUT_NOTIFY_DELETE_FILTER:
+        NT_ASSERT(nullptr == filterKey);
+        TraceInfo("removing filter", TraceLoggingValue(filter->filterId, "filter ID"));
+        break;
+    default:
+        TraceInfo("unknown notification", TraceLoggingValue(static_cast<int>(notifyType), "notification value"));
+    }
+
     return STATUS_SUCCESS;
 }
