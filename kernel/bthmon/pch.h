@@ -9,5 +9,8 @@
 
 #include <wdmguid.h>
 
+#include <usbioctl.h>
+#include <usb.h>
+
 #include "driver.h"
 #include "filter_device.h"
