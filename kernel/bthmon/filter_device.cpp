@@ -3,17 +3,87 @@
 #include <kcpp/scope_guard.h>
 
 namespace {
-    GUID GetDeviceBusGuid(WDFDEVICE device) {
+
+    class UsbFilterContext final {
+    public:
+        bool IsPassthrough() const { return m_passthrough; }
+        void SetPassthrough(bool passthrough) { m_passthrough = passthrough; }
+
+        [[nodiscard]]
+        NTSTATUS SetInstanceId(WDFDEVICE device) {
+            auto deviceProperty = kmdf::CreateDevicePropertyData(DEVPKEY_Device_InstanceId);
+            auto memoryAttributes = kmdf::CreateObjectAttributes(device);
+            WDFMEMORY deviceIdMemory{};
+            DEVPROPTYPE type{};
+            const auto status = WdfDeviceAllocAndQueryPropertyEx(device,
+                &deviceProperty,
+                PagedPool,
+                &memoryAttributes,
+                &deviceIdMemory,
+                &type);
+            if (status != STATUS_SUCCESS)
+            {
+                TraceError("WdfDeviceAllocAndQueryPropertyEx failed to get DEVPKEY_Device_InstanceId", TraceLoggingNTStatus(status));
+                return status;
+            }
+
+            size_t instanceIdSize{};
+            auto instanceIdBuffer = static_cast<wchar_t*>(WdfMemoryGetBuffer(deviceIdMemory, &instanceIdSize));
+            m_instanceId = UNICODE_STRING{
+                .Length = static_cast<USHORT>(instanceIdSize),
+                .MaximumLength = static_cast<USHORT>(instanceIdSize),
+                .Buffer = instanceIdBuffer };
+
+            return STATUS_SUCCESS;
+        }
+
+        bool operator==(const UNICODE_STRING& instanceId) const {
+            RtlEqualUnicodeString(&m_instanceId, &instanceId, TRUE) ? true : false;
+        }
+
+        UsbFilterContext() = default;
+        ~UsbFilterContext() = default;
+
+        void* operator new(size_t, void* p) { return p; }
+
+        UsbFilterContext(UsbFilterContext&&) = delete;
+    private:
+        UNICODE_STRING m_instanceId{};
+        bool m_passthrough{ true };
+    };
+
+    WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(UsbFilterContext, GetUsbFilterContext);
+
+    constexpr auto invalidGuid = GUID{ MAXULONG, MAXUSHORT, MAXUSHORT, {MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR } };
+
+    GUID GetDeviceBus(WDFDEVICE device) {
         GUID busTypeGuid{};
         ULONG returnLength{};
         const auto status = WdfDeviceQueryProperty(device, DevicePropertyBusTypeGuid, sizeof(busTypeGuid), &busTypeGuid, &returnLength);
         if (!NT_SUCCESS(status))
         {
             TraceError("WdfDeviceQueryProperty failed to get DevicePropertyBusTypeGuid", TraceLoggingNTStatus(status));
-            return GUID{ MAXULONG, MAXUSHORT, MAXUSHORT, {MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR } };
+            return invalidGuid;
         }
 
         return busTypeGuid;
+    }
+
+    GUID GetDeviceClass(WDFDEVICE device) {
+        GUID deviceClass{};
+
+        ULONG requiredSize{};
+        DEVPROPTYPE type{};
+        auto devPropertyData = kmdf::CreateDevicePropertyData(DEVPKEY_Device_ClassGuid);
+        const auto status = WdfDeviceQueryPropertyEx(device, &devPropertyData, sizeof(deviceClass), &deviceClass, &requiredSize, &type);
+        if (!NT_SUCCESS(status))
+        {
+            TraceError("WdfDeviceQueryPropertyEx failed to get DEVPKEY_Device_ClassGuid", TraceLoggingNTStatus(status));
+            return invalidGuid;
+        }
+
+        NT_ASSERT(DEVPROP_TYPE_GUID == type);
+        return deviceClass;
     }
 
     const char* UsbFunctionString(USHORT function)
@@ -136,6 +206,7 @@ namespace {
         [[maybe_unused]] size_t InputBufferLength,
         ULONG IoControlCode) {
         auto forwardGuard = kcpp::scope_guard([request, queue] { ForwardAndForget(request, queue); });
+        if (GetUsbFilterContext(WdfIoQueueGetDevice(queue))->IsPassthrough()) { return; }
         TraceInfo("ioctl", TraceLoggingHexULong(IoControlCode));
     }
 
@@ -146,6 +217,7 @@ namespace {
         ULONG code){
 
         auto forwardGuard = kcpp::scope_guard([request, queue] { ForwardAndForget(request, queue); });
+        if (GetUsbFilterContext(WdfIoQueueGetDevice(queue))->IsPassthrough()) { return; }
 
         const auto requestParams = kmdf::GetRequestParameters(request);
         NT_ASSERT(requestParams.Type == WdfRequestTypeDeviceControlInternal);
@@ -171,6 +243,7 @@ namespace {
         size_t length
     ) {
         auto forwardGuard = kcpp::scope_guard([request, queue] { ForwardAndForget(request, queue); });
+        if (GetUsbFilterContext(WdfIoQueueGetDevice(queue))->IsPassthrough()) { return; }
         TraceInfo("read", TraceLoggingValue(length));
     }
 
@@ -178,25 +251,51 @@ namespace {
         WDFREQUEST request,
         size_t length) {
         auto forwardGuard = kcpp::scope_guard([request, queue] { ForwardAndForget(request, queue); });
+        if (GetUsbFilterContext(WdfIoQueueGetDevice(queue))->IsPassthrough()) { return; }
         TraceInfo("write", TraceLoggingValue(length));
     }
+}
+
+
+void FilterDeviceContextCleanup(WDFOBJECT filterDevice) {
+    GetUsbFilterContext(filterDevice)->~UsbFilterContext();
 }
 
 NTSTATUS AddDevice([[maybe_unused]] WDFDRIVER driver, PWDFDEVICE_INIT deviceInit) {
     WdfFdoInitSetFilter(deviceInit);
 
+    auto filterDeviceAttributes = kmdf::CreateObjectAttributes(nullptr, FilterDeviceContextCleanup);
+    WDF_OBJECT_ATTRIBUTES_SET_CONTEXT_TYPE(&filterDeviceAttributes, UsbFilterContext);
+
     WDFDEVICE filterDevice{};
-    auto status = WdfDeviceCreate(&deviceInit, WDF_NO_OBJECT_ATTRIBUTES, &filterDevice);
-    if (STATUS_SUCCESS != status)
-    {
+    auto status = WdfDeviceCreate(&deviceInit, &filterDeviceAttributes, &filterDevice);
+    if (STATUS_SUCCESS != status) {
         TraceError("WdfDeviceCreate failed to create filter device", TraceLoggingNTStatus(status));
         return status;
     }
 
-    if (GetDeviceBusGuid(filterDevice) != GUID_BUS_TYPE_USB)
-    {
-        TraceInfo("do not attach to non-root bluetooth device");
+    auto filterContext = new(GetUsbFilterContext(filterDevice)) UsbFilterContext;
+
+    const auto deviceClass = GetDeviceClass(filterDevice);
+    TraceVerbose("attaching ?; device class", TraceLoggingValue(deviceClass));
+
+    if (deviceClass != GUID_DEVCLASS_USB) { // do not attach to anything other than USB
+        TraceInfo("device class is not USB, won't attach", TraceLoggingValue(deviceClass));
+
+        if ((deviceClass == GUID_DEVCLASS_BLUETOOTH) &&
+            (GetDeviceBus(filterDevice) == GUID_BUS_TYPE_USB)) { // root BTH device
+            TraceInfo("root BTH device");
+
+        }
+
         return STATUS_FLT_DO_NOT_ATTACH;
+    }
+
+    status = filterContext->SetInstanceId(filterDevice);
+    if (!NT_SUCCESS(status))
+    {
+        TraceError("SetInstanceId failed", TraceLoggingNTStatus(status));
+        return status;
     }
 
     auto queueConfig = kmdf::CreateQueueConfig();

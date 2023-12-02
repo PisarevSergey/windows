@@ -35,12 +35,14 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="device_property.h" />
     <ClInclude Include="driver.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="queue.h" />
     <ClInclude Include="request.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="device_property.cpp" />
     <ClCompile Include="driver.cpp" />
     <ClCompile Include="object.cpp" />
     <ClCompile Include="queue.cpp" />

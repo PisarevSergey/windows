@@ -16,5 +16,6 @@ namespace kmdf {
     NTSTATUS ForwardAndForget(WDFREQUEST request, WDFIOTARGET target);
 
     [[nodiscard]]
-    NTSTATUS ForwardWithCompletion(WDFREQUEST request, WDFIOTARGET target, PFN_WDF_REQUEST_COMPLETION_ROUTINE completion, WDFCONTEXT completionContext = nullptr);
+    NTSTATUS ForwardWithCompletion(WDFREQUEST request, WDFIOTARGET target,
+        PFN_WDF_REQUEST_COMPLETION_ROUTINE completion, WDFCONTEXT completionContext = nullptr);
 }
