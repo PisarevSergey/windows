@@ -1,6 +1,8 @@
 #include "device_property.h"
 #include "object.h"
 
+#include <trace_logging\trace.h>
+
 namespace kmdf {
     WDF_DEVICE_PROPERTY_DATA CreateDevicePropertyData(const DEVPROPKEY& propertyKey, LCID lcid, ULONG flags)
     {
@@ -20,6 +22,7 @@ namespace kmdf {
         DEVPROPTYPE propertyType{};
         status = WdfDeviceAllocAndQueryPropertyEx(device, &deviceProperty, PagedPool, &memoryAttributes, &devicePropertyMemory, &propertyType);
         if (STATUS_SUCCESS != status) {
+            TraceError("WdfDeviceAllocAndQueryPropertyEx failed", TraceLoggingNTStatus(status));
             return {};
         }
 

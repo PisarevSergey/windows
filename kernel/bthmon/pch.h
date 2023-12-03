@@ -2,6 +2,7 @@
 
 #include <ntifs.h>
 #include <ntintsafe.h>
+#include <ntstrsafe.h>
 
 #include <trace_logging/trace.h>
 
