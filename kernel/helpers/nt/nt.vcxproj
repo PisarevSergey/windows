@@ -21,10 +21,12 @@
   <ItemGroup>
     <ClInclude Include="device.h" />
     <ClInclude Include="object.h" />
+    <ClInclude Include="spin_lock.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="device.cpp" />
     <ClCompile Include="object.cpp" />
+    <ClCompile Include="spin_lock.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{0C286A13-25D9-4163-9895-5CB10343F041}</ProjectGuid>
