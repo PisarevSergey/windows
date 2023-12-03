@@ -1,4 +1,5 @@
 #include "device_property.h"
+#include "object.h"
 
 namespace kmdf {
     WDF_DEVICE_PROPERTY_DATA CreateDevicePropertyData(const DEVPROPKEY& propertyKey, LCID lcid, ULONG flags)
@@ -8,5 +9,20 @@ namespace kmdf {
         devPropertyData.Lcid = lcid;
         devPropertyData.Flags = flags;
         return devPropertyData;
+    }
+
+    WDFMEMORY AllocAndQueryDeviceProperty(NTSTATUS& status, WDFDEVICE device, const DEVPROPKEY& propertyKey, WDFOBJECT propertyMemoryParent, PFN_WDF_OBJECT_CONTEXT_CLEANUP propertyMemoryCleanupCallback)
+    {
+        auto deviceProperty = kmdf::CreateDevicePropertyData(propertyKey);
+        auto memoryAttributes = kmdf::CreateObjectAttributes(propertyMemoryParent, propertyMemoryCleanupCallback);
+
+        WDFMEMORY devicePropertyMemory{};
+        DEVPROPTYPE propertyType{};
+        status = WdfDeviceAllocAndQueryPropertyEx(device, &deviceProperty, PagedPool, &memoryAttributes, &devicePropertyMemory, &propertyType);
+        if (STATUS_SUCCESS != status) {
+            return {};
+        }
+
+        return devicePropertyMemory;
     }
 }
