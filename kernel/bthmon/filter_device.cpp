@@ -3,6 +3,32 @@
 #include <kcpp/scope_guard.h>
 
 namespace {
+    auto toString(WDFMEMORY stringMemory) {
+
+        size_t bufferSize{};
+        auto buffer = static_cast<wchar_t*>(WdfMemoryGetBuffer(stringMemory, &bufferSize));
+
+        USHORT stringSize{};
+        [[maybe_unused]] const auto status = RtlULongLongToUShort(bufferSize, &stringSize);
+        NT_ASSERT(STATUS_SUCCESS == status);
+
+        return UNICODE_STRING{ .Length = stringSize, .MaximumLength = stringSize, .Buffer = buffer };
+    }
+
+    WDFMEMORY QueryDeviceParent(NTSTATUS& status, WDFDEVICE device) {
+        auto deviceProperty = kmdf::CreateDevicePropertyData(DEVPKEY_Device_Parent);
+        auto memoryAttributes = kmdf::CreateObjectAttributes(device);
+
+        WDFMEMORY parentId{};
+        DEVPROPTYPE propertyType{};
+        status = WdfDeviceAllocAndQueryPropertyEx(device, &deviceProperty, PagedPool, &memoryAttributes, &parentId, &propertyType);
+        if (STATUS_SUCCESS != status)
+        {
+            TraceError("WdfDeviceAllocAndQueryPropertyEx failed to get DEVPKEY_Device_Parent", TraceLoggingNTStatus(status));
+        }
+
+        return parentId;
+    }
 
     class UsbFilterContext final {
     public:
@@ -21,25 +47,17 @@ namespace {
                 &memoryAttributes,
                 &deviceIdMemory,
                 &type);
-            if (status != STATUS_SUCCESS)
-            {
+            if (status != STATUS_SUCCESS) {
                 TraceError("WdfDeviceAllocAndQueryPropertyEx failed to get DEVPKEY_Device_InstanceId", TraceLoggingNTStatus(status));
                 return status;
             }
 
-            size_t instanceIdSize{};
-            auto instanceIdBuffer = static_cast<wchar_t*>(WdfMemoryGetBuffer(deviceIdMemory, &instanceIdSize));
-            m_instanceId = UNICODE_STRING{
-                .Length = static_cast<USHORT>(instanceIdSize),
-                .MaximumLength = static_cast<USHORT>(instanceIdSize),
-                .Buffer = instanceIdBuffer };
+            m_instanceId = toString(deviceIdMemory);
 
             return STATUS_SUCCESS;
         }
 
-        bool operator==(const UNICODE_STRING& instanceId) const {
-            RtlEqualUnicodeString(&m_instanceId, &instanceId, TRUE) ? true : false;
-        }
+        const UNICODE_STRING& GetInstanceId() const { return m_instanceId; }
 
         UsbFilterContext() = default;
         ~UsbFilterContext() = default;
@@ -285,7 +303,14 @@ NTSTATUS AddDevice([[maybe_unused]] WDFDRIVER driver, PWDFDEVICE_INIT deviceInit
         if ((deviceClass == GUID_DEVCLASS_BLUETOOTH) &&
             (GetDeviceBus(filterDevice) == GUID_BUS_TYPE_USB)) { // root BTH device
             TraceInfo("root BTH device");
+            auto parentIdMemory = QueryDeviceParent(status, filterDevice);
+            if (!NT_SUCCESS(status)) {
+                TraceError("QueryDeviceParent failed", TraceLoggingNTStatus(status));
+                return status;
+            }
 
+            auto parentId = toString(parentIdMemory);
+            TraceInfo("ParentId", TraceLoggingUnicodeString(&parentId));
         }
 
         return STATUS_FLT_DO_NOT_ATTACH;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ntifs.h>
+#include <ntintsafe.h>
 
 #include <trace_logging/trace.h>
 
