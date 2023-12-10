@@ -154,12 +154,16 @@
   <ItemGroup>
     <ClCompile Include="driver.cpp" />
     <ClCompile Include="filter_device.cpp" />
+    <ClCompile Include="helpers.cpp" />
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="usb_filter_device_context.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="driver.h" />
     <ClInclude Include="filter_device.h" />
+    <ClInclude Include="helpers.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="usb_filter_device_context.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

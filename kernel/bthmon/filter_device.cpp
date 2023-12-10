@@ -3,74 +3,6 @@
 #include <kcpp/scope_guard.h>
 
 namespace {
-    UNICODE_STRING toString(NTSTATUS& status, WDFMEMORY stringMemory) {
-        size_t bufferSize{};
-        auto buffer = static_cast<wchar_t*>(WdfMemoryGetBuffer(stringMemory, &bufferSize));
-
-        USHORT bufferSizeUshort{};
-        status = RtlULongLongToUShort(bufferSize, &bufferSizeUshort);
-        if (!NT_SUCCESS(status)) {
-            TraceCritical("RtlULongLongToUShort failed", TraceLoggingValue(bufferSize));
-            return {};
-        }
-
-        size_t stringLength{};
-        status = RtlStringCbLengthW(buffer, bufferSize, &stringLength);
-        if (!NT_SUCCESS(status)) {
-            TraceCritical("RtlStringCbLengthW failed to calculate string length",
-                TraceLoggingWideString(buffer),
-                TraceLoggingValue(bufferSize),
-                TraceLoggingNTStatus(status));
-            return {};
-        }
-
-        USHORT stringLengthUshort{};
-        status = RtlULongLongToUShort(stringLength, &stringLengthUshort);
-        if (!NT_SUCCESS(status)) {
-            TraceCritical("RtlULongLongToUShort failed", TraceLoggingValue(stringLength));
-            return {};
-        }
-
-        return UNICODE_STRING{ .Length = stringLengthUshort, .MaximumLength = bufferSizeUshort, .Buffer = buffer };
-    }
-
-    class UsbFilterContext final {
-    public:
-        bool IsPassthrough() const { return m_passthrough; }
-        void SetPassthrough(bool passthrough) { m_passthrough = passthrough; }
-
-        [[nodiscard]]
-        NTSTATUS SetInstanceId(WDFDEVICE device) {
-            NTSTATUS status{};
-            auto deviceIdMemory = kmdf::AllocAndQueryDeviceProperty(status, device, DEVPKEY_Device_InstanceId, device);
-            if (status != STATUS_SUCCESS) {
-                TraceError("kmdf::AllocAndQueryDeviceProperty failed to get DEVPKEY_Device_InstanceId", TraceLoggingNTStatus(status));
-                return status;
-            }
-
-            m_instanceId = toString(status, deviceIdMemory);
-            if (!NT_SUCCESS(status)) {
-                return status;
-            }
-
-            return STATUS_SUCCESS;
-        }
-
-        const UNICODE_STRING& GetInstanceId() const { return m_instanceId; }
-
-        UsbFilterContext() = default;
-        ~UsbFilterContext() = default;
-
-        void* operator new(size_t, void* p) { return p; }
-
-        UsbFilterContext(UsbFilterContext&&) = delete;
-    private:
-        UNICODE_STRING m_instanceId{};
-        bool m_passthrough{ true };
-    };
-
-    WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(UsbFilterContext, GetUsbFilterContext);
-
     constexpr auto invalidGuid = GUID{ MAXULONG, MAXUSHORT, MAXUSHORT, {MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR, MAXUCHAR } };
 
     GUID GetDeviceBus(WDFDEVICE device) {
@@ -273,16 +205,15 @@ namespace {
     }
 }
 
-
 void FilterDeviceContextCleanup(WDFOBJECT filterDevice) {
-    GetUsbFilterContext(filterDevice)->~UsbFilterContext();
+    GetUsbFilterContext(filterDevice)->~UsbFilterDeviceContext();
 }
 
 NTSTATUS AddDevice([[maybe_unused]] WDFDRIVER driver, PWDFDEVICE_INIT deviceInit) {
     WdfFdoInitSetFilter(deviceInit);
 
     auto filterDeviceAttributes = kmdf::CreateObjectAttributes(nullptr, FilterDeviceContextCleanup);
-    WDF_OBJECT_ATTRIBUTES_SET_CONTEXT_TYPE(&filterDeviceAttributes, UsbFilterContext);
+    WDF_OBJECT_ATTRIBUTES_SET_CONTEXT_TYPE(&filterDeviceAttributes, UsbFilterDeviceContext);
 
     WDFDEVICE filterDevice{};
     auto status = WdfDeviceCreate(&deviceInit, &filterDeviceAttributes, &filterDevice);
@@ -291,7 +222,7 @@ NTSTATUS AddDevice([[maybe_unused]] WDFDRIVER driver, PWDFDEVICE_INIT deviceInit
         return status;
     }
 
-    auto filterContext = new(GetUsbFilterContext(filterDevice)) UsbFilterContext;
+    auto filterContext = new(GetUsbFilterContext(filterDevice)) UsbFilterDeviceContext;
 
     const auto deviceClass = GetDeviceClass(filterDevice);
     TraceVerbose("attaching ?; device class", TraceLoggingValue(deviceClass));
@@ -309,7 +240,7 @@ NTSTATUS AddDevice([[maybe_unused]] WDFDRIVER driver, PWDFDEVICE_INIT deviceInit
                 return status;
             }
 
-            auto parentId = toString(status, parentIdMemory);
+            auto parentId = helpers::ToStringView(status, parentIdMemory);
             if (!NT_SUCCESS(status)) {
                 TraceError("failed to convert parent id to string", TraceLoggingNTStatus(status));
                 return status;

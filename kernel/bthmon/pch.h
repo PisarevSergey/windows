@@ -21,5 +21,7 @@
 #include <usbioctl.h>
 #include <usb.h>
 
+#include "helpers.h"
 #include "driver.h"
+#include "usb_filter_device_context.h"
 #include "filter_device.h"
