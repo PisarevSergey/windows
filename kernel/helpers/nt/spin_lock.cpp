@@ -1,19 +1,19 @@
 #include "spin_lock.h"
 
 namespace nt {
-    KIRQL ReadWriteSpinLock::AcquireExclusive() {
+    KIRQL ReadWriteSpinLock::lock() {
         return ExAcquireSpinLockExclusive(&m_lock);
     }
 
-    void ReadWriteSpinLock::ReleaseExclusive(KIRQL oldIrql) {
+    void ReadWriteSpinLock::unlock(KIRQL oldIrql) {
         ExReleaseSpinLockExclusive(&m_lock, oldIrql);
     }
 
-    KIRQL ReadWriteSpinLock::AcquireShared() {
+    KIRQL ReadWriteSpinLock::lock_shared() {
         return ExAcquireSpinLockShared(&m_lock);
     }
 
-    void ReadWriteSpinLock::ReleaseShared(KIRQL oldIrql) {
+    void ReadWriteSpinLock::unlock_shared(KIRQL oldIrql) {
         ExReleaseSpinLockShared(&m_lock, oldIrql);
     }
 }
