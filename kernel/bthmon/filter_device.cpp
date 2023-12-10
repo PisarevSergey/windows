@@ -206,7 +206,13 @@ namespace {
 }
 
 void FilterDeviceContextCleanup(WDFOBJECT filterDevice) {
-    GetUsbFilterContext(filterDevice)->~UsbFilterDeviceContext();
+    auto context = GetUsbFilterContext(filterDevice);
+
+    if (context->Flink && context->Blink) { // context was inserted in global list
+        g_driver.Remove(*context);
+    }
+
+    context->~UsbFilterDeviceContext();
 }
 
 NTSTATUS AddDevice([[maybe_unused]] WDFDRIVER driver, PWDFDEVICE_INIT deviceInit) {
@@ -246,18 +252,21 @@ NTSTATUS AddDevice([[maybe_unused]] WDFDRIVER driver, PWDFDEVICE_INIT deviceInit
                 return status;
             }
             TraceInfo("ParentId", TraceLoggingUnicodeString(&parentId));
+
+            g_driver.StartFilterUsbDevice(parentId);
         }
 
         return STATUS_FLT_DO_NOT_ATTACH;
     }
 
-    status = filterContext->SetInstanceId(filterDevice);
+    status = filterContext->Init(filterDevice);
     if (!NT_SUCCESS(status))
     {
         TraceError("SetInstanceId failed", TraceLoggingNTStatus(status));
         return status;
     }
     TraceInfo("Instance ID", TraceLoggingUnicodeString(&filterContext->GetInstanceId()));
+    g_driver.Insert(*filterContext);
 
     auto queueConfig = kmdf::CreateQueueConfig();
     queueConfig.EvtIoDeviceControl = OnIoctl;

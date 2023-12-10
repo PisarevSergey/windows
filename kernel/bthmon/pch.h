@@ -6,6 +6,8 @@
 
 #include <trace_logging/trace.h>
 
+#include <nt/mutex.h>
+
 #include <kmdf/object.h>
 #include <kmdf/driver.h>
 #include <kmdf/queue.h>
@@ -22,6 +24,6 @@
 #include <usb.h>
 
 #include "helpers.h"
-#include "driver.h"
 #include "usb_filter_device_context.h"
 #include "filter_device.h"
+#include "driver.h"
