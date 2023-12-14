@@ -1,56 +1,20 @@
 #include "pch.h"
 
+#include <kcpp/scope_guard.h>
+
 namespace {
-    typedef struct _DEVICE_EXTENSION
+
+    NTSTATUS FilterStartCompletionRoutine([[maybe_unused]] PDEVICE_OBJECT deviceObject,
+            PIRP irp,
+            PVOID context)
     {
-        //
-        // The top of the stack before this filter was added.
-        //
-
-        PDEVICE_OBJECT  NextLowerDriver;
-
-        //
-        // Removelock to track IRPs so that device can be removed and
-        // the driver can be unloaded safely.
-        //
-        IO_REMOVE_LOCK RemoveLock;
-
-    } DEVICE_EXTENSION, * PDEVICE_EXTENSION;
-
-    NTSTATUS
-        FilterStartCompletionRoutine(
-            PDEVICE_OBJECT   DeviceObject,
-            PIRP             Irp,
-            PVOID            Context
-        )
-        /*++
-        Routine Description:
-            A completion routine for use when calling the lower device objects to
-            which our filter deviceobject is attached.
-
-        Arguments:
-
-            DeviceObject - Pointer to deviceobject
-            Irp          - Pointer to a PnP Irp.
-            Context      - NULL
-        Return Value:
-
-            NT Status is returned.
-
-        --*/
-
-    {
-        PKEVENT             event = (PKEVENT)Context;
-
-        UNREFERENCED_PARAMETER(DeviceObject);
-
         //
         // If the lower driver didn't return STATUS_PENDING, we don't need to 
         // set the event because we won't be waiting on it. 
         // This optimization avoids grabbing the dispatcher lock, and improves perf.
         //
-        if (Irp->PendingReturned == TRUE) {
-            KeSetEvent(event, IO_NO_INCREMENT, FALSE);
+        if (irp->PendingReturned == TRUE) {
+            static_cast<nt::Event*>(context)->Set();
         }
 
         //
@@ -58,111 +22,69 @@ namespace {
         //
 
         return STATUS_MORE_PROCESSING_REQUIRED;
-
     }
 
-    NTSTATUS
-        FilterDeviceUsageNotificationCompletionRoutine(
-            PDEVICE_OBJECT   DeviceObject,
-            PIRP             Irp,
-            PVOID            Context
-        )
-        /*++
-        Routine Description:
-            A completion routine for use when calling the lower device objects to
-            which our filter deviceobject is attached.
+    NTSTATUS FilterDeviceUsageNotificationCompletionRoutine(PDEVICE_OBJECT deviceObject,
+        PIRP irp,
+        PVOID context);
 
-        Arguments:
+class FilterDeviceExtension final {
+public:
+    FilterDeviceExtension() = default;
+    ~FilterDeviceExtension() = default;
 
-            DeviceObject - Pointer to deviceobject
-            Irp          - Pointer to a PnP Irp.
-            Context      - NULL
-        Return Value:
-
-            NT Status is returned.
-
-        --*/
-
-    {
-        PDEVICE_EXTENSION       deviceExtension;
-
-        UNREFERENCED_PARAMETER(Context);
-
-        deviceExtension = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
-
-
-        if (Irp->PendingReturned) {
-
-            IoMarkIrpPending(Irp);
-        }
+    NTSTATUS Attach(DEVICE_OBJECT& filterDevice, DEVICE_OBJECT& pdo) {
+        const auto status = IoAttachDeviceToDeviceStackSafe(&filterDevice, &pdo, &m_lowerDevice);
 
         //
-        // On the way up, pagable might become clear. Mimic the driver below us.
+        // Failure for attachment is an indication of a broken plug & play system.
         //
-        if (!(deviceExtension->NextLowerDriver->Flags & DO_POWER_PAGABLE)) {
-
-            DeviceObject->Flags &= ~DO_POWER_PAGABLE;
-        }
-
-        IoReleaseRemoveLock(&deviceExtension->RemoveLock, Irp);
-
-        return STATUS_CONTINUE_COMPLETION;
-
-    }
-
-    NTSTATUS DefaultDispatch(PDEVICE_OBJECT deviceObject, PIRP irp) {
-        PDEVICE_EXTENSION           deviceExtension;
-        NTSTATUS    status;
-
-        deviceExtension = (PDEVICE_EXTENSION)deviceObject->DeviceExtension;
-        status = IoAcquireRemoveLock(&deviceExtension->RemoveLock, irp);
         if (!NT_SUCCESS(status)) {
-            return nt::Complete(*irp, status);
+            return status;
         }
 
-        IoSkipCurrentIrpStackLocation(irp);
-        status = IoCallDriver(deviceExtension->NextLowerDriver, irp);
-        IoReleaseRemoveLock(&deviceExtension->RemoveLock, irp);
-        return status;
+        filterDevice.Flags |= m_lowerDevice->Flags & (DO_BUFFERED_IO | DO_DIRECT_IO | DO_POWER_PAGABLE);
+
+
+        filterDevice.DeviceType = m_lowerDevice->DeviceType;
+        filterDevice.Characteristics = m_lowerDevice->Characteristics;
+
+        //
+        // Set the initial state of the Filter DO
+        //
+
+        filterDevice.Flags &= ~DO_DEVICE_INITIALIZING;
+
+        return STATUS_SUCCESS;
     }
 
-    NTSTATUS DispatchPnp(
-            PDEVICE_OBJECT DeviceObject,
-            PIRP Irp)
+    NTSTATUS DispatchPnp(IRP& irp)
     {
-        PDEVICE_EXTENSION           deviceExtension;
-        PIO_STACK_LOCATION         irpStack;
-        NTSTATUS                            status;
-        KEVENT                               event;
-
-        PAGED_CODE();
-
-        deviceExtension = (PDEVICE_EXTENSION)DeviceObject->DeviceExtension;
-        irpStack = IoGetCurrentIrpStackLocation(Irp);
-
-        status = IoAcquireRemoveLock(&deviceExtension->RemoveLock, Irp);
+        auto status = m_removeLock.Acquire(&irp);
         if (!NT_SUCCESS(status)) {
-            return nt::Complete(*Irp, status);
+            return nt::Complete(irp, status);
         }
+        auto removeLockGuard = kcpp::scope_guard{ [this, &irp] {m_removeLock.Release(&irp); } };
 
-        switch (irpStack->MinorFunction) {
+        const auto& irpStack = *IoGetCurrentIrpStackLocation(&irp);
+        switch (irpStack.MinorFunction) {
         case IRP_MN_START_DEVICE:
-
+        {
             //
             // The device is starting.
             // We cannot touch the device (send it any non pnp irps) until a
             // start device has been passed down to the lower drivers.
             //
-            KeInitializeEvent(&event, NotificationEvent, FALSE);
-            IoCopyCurrentIrpStackLocationToNext(Irp);
-            IoSetCompletionRoutine(Irp,
+
+            nt::Event startCompleted{NotificationEvent};
+            IoCopyCurrentIrpStackLocationToNext(&irp);
+            IoSetCompletionRoutine(&irp,
                 FilterStartCompletionRoutine,
-                &event,
+                &startCompleted,
                 TRUE,
                 TRUE,
                 TRUE);
-
-            status = IoCallDriver(deviceExtension->NextLowerDriver, Irp);
+            status = IoCallDriver(m_lowerDevice, &irp);
 
             //
             // Wait for lower drivers to be done with the Irp. Important thing to
@@ -171,41 +93,36 @@ namespace {
             // the stack from getting paged out.
             //
             if (status == STATUS_PENDING) {
-
-                KeWaitForSingleObject(&event, Executive, KernelMode, FALSE, NULL);
-                status = Irp->IoStatus.Status;
+                startCompleted.Wait();
+                status = irp.IoStatus.Status;
             }
 
             if (NT_SUCCESS(status)) {
-
                 //
                 // On the way up inherit FILE_REMOVABLE_MEDIA during Start.
                 // This characteristic is available only after the driver stack is started!.
                 //
-                if (deviceExtension->NextLowerDriver->Characteristics & FILE_REMOVABLE_MEDIA) {
-
-                    DeviceObject->Characteristics |= FILE_REMOVABLE_MEDIA;
+                if (m_lowerDevice->Characteristics & FILE_REMOVABLE_MEDIA) {
+                    irpStack.DeviceObject->Characteristics |= FILE_REMOVABLE_MEDIA;
                 }
             }
 
-            Irp->IoStatus.Status = status;
-            IoCompleteRequest(Irp, IO_NO_INCREMENT);
-            IoReleaseRemoveLock(&deviceExtension->RemoveLock, Irp);
-            return status;
-
+            return nt::Complete(irp, status);
+        }
         case IRP_MN_REMOVE_DEVICE:
 
             //
             // Wait for all outstanding requests to complete
             //
-            IoReleaseRemoveLockAndWait(&deviceExtension->RemoveLock, Irp);
+            removeLockGuard.release();
+            m_removeLock.ReleaseAndWait(&irp);
 
-            IoSkipCurrentIrpStackLocation(Irp);
+            status = ForwardAndForgetNoLock(irp);
 
-            status = IoCallDriver(deviceExtension->NextLowerDriver, Irp);
+            IoDetachDevice(m_lowerDevice);
+            this->~FilterDeviceExtension();
+            IoDeleteDevice(irpStack.DeviceObject);
 
-            IoDetachDevice(deviceExtension->NextLowerDriver);
-            IoDeleteDevice(DeviceObject);
             return status;
 
         case IRP_MN_QUERY_STOP_DEVICE:
@@ -243,16 +160,16 @@ namespace {
             // above us. If no one is above us, just set pagable.
             //
 #pragma prefast(suppress:__WARNING_INACCESSIBLE_MEMBER)
-            if ((DeviceObject->AttachedDevice == NULL) ||
-                (DeviceObject->AttachedDevice->Flags & DO_POWER_PAGABLE)) {
+            if ((irpStack.DeviceObject->AttachedDevice == NULL) ||
+                (irpStack.DeviceObject->AttachedDevice->Flags & DO_POWER_PAGABLE)) {
 
-                DeviceObject->Flags |= DO_POWER_PAGABLE;
+                irpStack.DeviceObject->Flags |= DO_POWER_PAGABLE;
             }
 
-            IoCopyCurrentIrpStackLocationToNext(Irp);
+            IoCopyCurrentIrpStackLocationToNext(&irp);
 
             IoSetCompletionRoutine(
-                Irp,
+                &irp,
                 FilterDeviceUsageNotificationCompletionRoutine,
                 NULL,
                 TRUE,
@@ -260,14 +177,14 @@ namespace {
                 TRUE
             );
 
-            return IoCallDriver(deviceExtension->NextLowerDriver, Irp);
+            return IoCallDriver(m_lowerDevice, &irp);
 
         default:
             //
             // If you don't handle any IRP you must leave the
             // status as is.
             //
-            status = Irp->IoStatus.Status;
+            status = irp.IoStatus.Status;
 
             break;
         }
@@ -275,177 +192,152 @@ namespace {
         //
         // Pass the IRP down and forget it.
         //
-        Irp->IoStatus.Status = status;
-        IoSkipCurrentIrpStackLocation(Irp);
-        status = IoCallDriver(deviceExtension->NextLowerDriver, Irp);
-        IoReleaseRemoveLock(&deviceExtension->RemoveLock, Irp);
+        irp.IoStatus.Status = status;
+        return ForwardAndForgetNoLock(irp);
+    }
+
+
+    NTSTATUS ForwardAndForget(IRP& irp) {
+        const auto status = m_removeLock.Acquire(&irp);
+        if (!NT_SUCCESS(status)) {
+            return nt::Complete(irp, status);
+        }
+        const auto removeLockGuard = kcpp::scope_guard{ [this, &irp] {m_removeLock.Release(&irp); } };
+
+        return ForwardAndForgetNoLock(irp);
+    }
+
+    void OnDeviceUsageNotificationComplete(DEVICE_OBJECT& deviceObject,
+        PIRP irp) {
+        const auto removeLockScopeGuard = [this, irp] { m_removeLock.Release(irp); };
+
+        // On the way up, pagable might become clear.
+        // Mimic the driver below us.
+        if (!(m_lowerDevice->Flags & DO_POWER_PAGABLE)) {
+
+            deviceObject.Flags &= ~DO_POWER_PAGABLE;
+        }
+    }
+
+    FilterDeviceExtension(FilterDeviceExtension&&) = delete;
+
+    void* operator new(size_t, void* p) { return p; }
+private:
+    nt::RemoveLock m_removeLock{ 'tlFB', 1, 100 };
+    PDEVICE_OBJECT  m_lowerDevice{};
+
+    NTSTATUS ForwardAndForgetNoLock(IRP& irp) {
+        IoSkipCurrentIrpStackLocation(&irp);
+        return IoCallDriver(m_lowerDevice, &irp);
+    }
+};
+
+NTSTATUS FilterDeviceUsageNotificationCompletionRoutine(PDEVICE_OBJECT deviceObject,
+    PIRP irp,
+    [[maybe_unused]] PVOID context) {
+    if (irp->PendingReturned) {
+        IoMarkIrpPending(irp);
+    }
+
+    auto deviceExtension = static_cast<FilterDeviceExtension*>(deviceObject->DeviceExtension);
+    deviceExtension->OnDeviceUsageNotificationComplete(*deviceObject, irp);
+
+    return STATUS_CONTINUE_COMPLETION;
+}
+
+NTSTATUS DefaultDispatch(PDEVICE_OBJECT deviceObject, PIRP irp) {
+    NT_ASSERT(irp != nullptr);
+
+    auto deviceExtension = static_cast<FilterDeviceExtension*>(deviceObject->DeviceExtension);
+    return deviceExtension->ForwardAndForget(*irp);
+}
+
+NTSTATUS DispatchPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
+    return static_cast<FilterDeviceExtension*>(DeviceObject->DeviceExtension)->DispatchPnp(*Irp);
+}
+
+NTSTATUS AddDevice(__in PDRIVER_OBJECT DriverObject, __in PDEVICE_OBJECT PhysicalDeviceObject)
+{
+    const auto deviceType = [PhysicalDeviceObject]{
+        auto highestDeviceObject = IoGetAttachedDeviceReference(PhysicalDeviceObject);
+        const auto deviceType = highestDeviceObject->DeviceType;
+        ObDereferenceObject(highestDeviceObject);
+        return deviceType;}();
+
+    PDEVICE_OBJECT filterDevice{};
+    auto status = IoCreateDevice(DriverObject,
+        sizeof(FilterDeviceExtension),
+        nullptr,  // No Name
+        deviceType,
+        FILE_DEVICE_SECURE_OPEN,
+        FALSE,
+        &filterDevice);
+    if (!NT_SUCCESS(status)) {
+        //
+        // Returning failure here prevents the entire stack from functioning,
+        // but most likely the rest of the stack will not be able to create
+        // device objects either, so it is still OK.
+        //
         return status;
     }
 
-    NTSTATUS
-        AddDevice(
-            __in PDRIVER_OBJECT DriverObject,
-            __in PDEVICE_OBJECT PhysicalDeviceObject
-        )
-        /*++
-
-        Routine Description:
-
-            The Plug & Play subsystem is handing us a brand new PDO, for which we
-            (by means of INF registration) have been asked to provide a driver.
-
-            We need to determine if we need to be in the driver stack for the device.
-            Create a function device object to attach to the stack
-            Initialize that device object
-            Return status success.
-
-            Remember: We can NOT actually send ANY non pnp IRPS to the given driver
-            stack, UNTIL we have received an IRP_MN_START_DEVICE.
-
-        Arguments:
-
-            DeviceObject - pointer to a device object.
-
-            PhysicalDeviceObject -  pointer to a device object created by the
-                                    underlying bus driver.
-
-        Return Value:
-
-            NT status code.
-
-        --*/
-    {
-        NTSTATUS                status = STATUS_SUCCESS;
-        PDEVICE_OBJECT          deviceObject = NULL;
-        PDEVICE_EXTENSION       deviceExtension;
-        ULONG                   deviceType = FILE_DEVICE_UNKNOWN;
-
-        PAGED_CODE();
-
-
-        deviceObject = IoGetAttachedDeviceReference(PhysicalDeviceObject);
-        deviceType = deviceObject->DeviceType;
-        ObDereferenceObject(deviceObject);
-
-        //
-        // Create a filter device object.
-        //
-
-        status = IoCreateDevice(DriverObject,
-            sizeof(DEVICE_EXTENSION),
-            NULL,  // No Name
-            deviceType,
-            FILE_DEVICE_SECURE_OPEN,
-            FALSE,
-            &deviceObject);
-
-
-        if (!NT_SUCCESS(status)) {
-            //
-            // Returning failure here prevents the entire stack from functioning,
-            // but most likely the rest of the stack will not be able to create
-            // device objects either, so it is still OK.
-            //
-            return status;
-        }
-
-        deviceExtension = (PDEVICE_EXTENSION)deviceObject->DeviceExtension;
-
-        deviceExtension->NextLowerDriver = IoAttachDeviceToDeviceStack(
-            deviceObject,
-            PhysicalDeviceObject);
-        //
-        // Failure for attachment is an indication of a broken plug & play system.
-        //
-
-        if (NULL == deviceExtension->NextLowerDriver) {
-
-            IoDeleteDevice(deviceObject);
-            return STATUS_UNSUCCESSFUL;
-        }
-
-        deviceObject->Flags |= deviceExtension->NextLowerDriver->Flags &
-            (DO_BUFFERED_IO | DO_DIRECT_IO |
-                DO_POWER_PAGABLE);
-
-
-        deviceObject->DeviceType = deviceExtension->NextLowerDriver->DeviceType;
-
-        deviceObject->Characteristics =
-            deviceExtension->NextLowerDriver->Characteristics;
-
-        //
-        // Let us use remove lock to keep count of IRPs so that we don't 
-        // deteach and delete our deviceobject until all pending I/Os in our
-        // devstack are completed. Remlock is required to protect us from
-        // various race conditions where our driver can get unloaded while we
-        // are still running dispatch or completion code.
-        //
-
-        IoInitializeRemoveLock(&deviceExtension->RemoveLock,
-            'tlFB',
-            1, // MaxLockedMinutes 
-            100); // HighWatermark, this parameter is 
-        // used only on checked build. Specifies 
-        // the maximum number of outstanding 
-        // acquisitions allowed on the lock
-
-
-    //
-    // Set the initial state of the Filter DO
-    //
-
-        deviceObject->Flags &= ~DO_DEVICE_INITIALIZING;
-
-        return STATUS_SUCCESS;
-
+    auto filterDeviceExtension = new(filterDevice->DeviceExtension)FilterDeviceExtension;
+    status = filterDeviceExtension->Attach(*filterDevice, *PhysicalDeviceObject);
+    if (!NT_SUCCESS(status)) {
+        IoDeleteDevice(filterDevice);
+        return status;
     }
 
-    VOID
-        Unload(
-            [[maybe_unused]] __in PDRIVER_OBJECT DriverObject
-        )
-        /*++
+    return STATUS_SUCCESS;
+}
 
-        Routine Description:
+VOID
+    Unload(
+        [[maybe_unused]] __in PDRIVER_OBJECT DriverObject
+    )
+    /*++
 
-            Free all the allocated resources in DriverEntry, etc.
+    Routine Description:
 
-        Arguments:
+        Free all the allocated resources in DriverEntry, etc.
 
-            DriverObject - pointer to a driver object.
+    Arguments:
 
-        Return Value:
+        DriverObject - pointer to a driver object.
 
-            VOID.
+    Return Value:
 
-        --*/
-    {
-        PAGED_CODE();
+        VOID.
 
-        //
-        // The device object(s) should be NULL now
-        // (since we unload, all the devices objects associated with this
-        // driver must be deleted.
-        //
-        //if (DriverObject->DeviceObject != NULL) {
-        //    ASSERTMSG("DeviceObject is not deleted ", FALSE);
-        //}
+    --*/
+{
+    PAGED_CODE();
 
-        //
-        // We should not be unloaded until all the devices we control
-        // have been removed from our queue.
-        //
+    //
+    // The device object(s) should be NULL now
+    // (since we unload, all the devices objects associated with this
+    // driver must be deleted.
+    //
+    //if (DriverObject->DeviceObject != NULL) {
+    //    ASSERTMSG("DeviceObject is not deleted ", FALSE);
+    //}
 
-        return;
-    }
+    //
+    // We should not be unloaded until all the devices we control
+    // have been removed from our queue.
+    //
 
-    alignas(Driver) char driverMemory[sizeof(Driver)];
+    return;
+}
+
+alignas(Driver) char driverMemory[sizeof(Driver)];
+
 }
 
 Driver& g_driver = *reinterpret_cast<Driver*>(driverMemory);
 
-extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT driverObject, [[maybe_unused]] PUNICODE_STRING regPath) {
+extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT driverObject,
+    [[maybe_unused]] PUNICODE_STRING regPath) {
 
     for (auto& majorFunction : driverObject->MajorFunction) {
         majorFunction = DefaultDispatch;

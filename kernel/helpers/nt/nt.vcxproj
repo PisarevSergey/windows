@@ -20,17 +20,21 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="device.h" />
+    <ClInclude Include="event.h" />
     <ClInclude Include="irp.h" />
     <ClInclude Include="list.h" />
     <ClInclude Include="mutex.h" />
     <ClInclude Include="object.h" />
+    <ClInclude Include="remove_lock.h" />
     <ClInclude Include="spin_lock.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="device.cpp" />
+    <ClCompile Include="event.cpp" />
     <ClCompile Include="irp.cpp" />
     <ClCompile Include="mutex.cpp" />
     <ClCompile Include="object.cpp" />
+    <ClCompile Include="remove_lock.cpp" />
     <ClCompile Include="spin_lock.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
