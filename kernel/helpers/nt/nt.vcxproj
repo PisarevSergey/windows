@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="device.h" />
+    <ClInclude Include="irp.h" />
     <ClInclude Include="list.h" />
     <ClInclude Include="mutex.h" />
     <ClInclude Include="object.h" />
@@ -27,6 +28,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="device.cpp" />
+    <ClCompile Include="irp.cpp" />
     <ClCompile Include="mutex.cpp" />
     <ClCompile Include="object.cpp" />
     <ClCompile Include="spin_lock.cpp" />
