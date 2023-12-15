@@ -35,6 +35,7 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "bus_filter", "kernel\bus_filter\bus_filter.vcxproj", "{80A60911-1729-4784-9B07-6AB491DC3105}"
 	ProjectSection(ProjectDependencies) = postProject
 		{0C286A13-25D9-4163-9895-5CB10343F041} = {0C286A13-25D9-4163-9895-5CB10343F041}
+		{A4E7ED26-FAF8-4A50-97BB-F319AC519683} = {A4E7ED26-FAF8-4A50-97BB-F319AC519683}
 	EndProjectSection
 EndProject
 Global
