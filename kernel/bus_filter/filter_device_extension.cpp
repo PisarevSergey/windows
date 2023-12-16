@@ -51,30 +51,29 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
     const auto& irpStack = *IoGetCurrentIrpStackLocation(&irp);
     switch (irpStack.MinorFunction) {
     case IRP_MN_START_DEVICE:
-    {
         //
         // The device is starting.
         // We cannot touch the device (send it any non pnp irps) until a
         // start device has been passed down to the lower drivers.
         //
 
-        if (IoForwardIrpSynchronously(m_lowerDevice, &irp) == FALSE) {
-            return nt::Complete(irp, STATUS_UNSUCCESSFUL);
-        }
+        if (IoForwardIrpSynchronously(m_lowerDevice, &irp)) {
 
-        status = irp.IoStatus.Status;
-        if (NT_SUCCESS(status)) {
-            //
-            // On the way up inherit FILE_REMOVABLE_MEDIA during Start.
-            // This characteristic is available only after the driver stack is started!.
-            //
-            if (m_lowerDevice->Characteristics & FILE_REMOVABLE_MEDIA) {
-                irpStack.DeviceObject->Characteristics |= FILE_REMOVABLE_MEDIA;
+            status = irp.IoStatus.Status;
+            if (NT_SUCCESS(status)) {
+                //
+                // On the way up inherit FILE_REMOVABLE_MEDIA during Start.
+                // This characteristic is available only after the driver stack is started!.
+                //
+                if (m_lowerDevice->Characteristics & FILE_REMOVABLE_MEDIA) {
+                    irpStack.DeviceObject->Characteristics |= FILE_REMOVABLE_MEDIA;
+                }
             }
+
+            return nt::Complete(irp, status);
         }
 
-        return nt::Complete(irp, status);
-    }
+        break;
     case IRP_MN_REMOVE_DEVICE:
 
         //
@@ -106,12 +105,26 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
 
         return nt::SendWithCompletionRoutine(*m_lowerDevice, irp, FilterDeviceUsageNotificationCompletionRoutine);
 
-    default:
-        return ForwardAndForgetNoRemoveLock(irp);
+    case IRP_MN_QUERY_DEVICE_RELATIONS:
+        if (irpStack.Parameters.QueryDeviceRelations.Type == BusRelations) {
+            if (IoForwardIrpSynchronously(m_lowerDevice, &irp)) {
+
+                if (NT_SUCCESS(irp.IoStatus.Status))
+                {
+                    DispatchBusRelations(*reinterpret_cast<DEVICE_RELATIONS*>(irp.IoStatus.Information));
+                }
+
+                return nt::Complete(irp, irp.IoStatus.Status);
+            }
+        }
+        break;
     }
+
+    return ForwardAndForgetNoRemoveLock(irp);
 }
 
 NTSTATUS FilterDeviceExtension::ForwardAndForget(IRP& irp) {
+
     const auto status = m_removeLock.Acquire(&irp);
     if (!NT_SUCCESS(status)) {
         return nt::Complete(irp, status);
@@ -123,6 +136,7 @@ NTSTATUS FilterDeviceExtension::ForwardAndForget(IRP& irp) {
 
 void FilterDeviceExtension::OnDeviceUsageNotificationComplete(DEVICE_OBJECT& deviceObject,
     PIRP irp) {
+
     const auto removeLockScopeGuard = [this, irp] { m_removeLock.Release(irp); };
 
     // On the way up, pagable might become clear.
@@ -136,4 +150,8 @@ void FilterDeviceExtension::OnDeviceUsageNotificationComplete(DEVICE_OBJECT& dev
 NTSTATUS FilterDeviceExtension::ForwardAndForgetNoRemoveLock(IRP& irp) {
     IoSkipCurrentIrpStackLocation(&irp);
     return IoCallDriver(m_lowerDevice, &irp);
+}
+
+void FilterDeviceExtension::DispatchBusRelations([[maybe_unused]] const DEVICE_RELATIONS& busRelations)
+{
 }

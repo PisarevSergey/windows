@@ -21,4 +21,6 @@ private:
     PDEVICE_OBJECT  m_lowerDevice{};
 
     NTSTATUS ForwardAndForgetNoRemoveLock(IRP& irp);
+
+    void DispatchBusRelations(const DEVICE_RELATIONS& busRelations);
 };
