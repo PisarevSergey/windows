@@ -2,26 +2,6 @@
 
 #include <kcpp/scope_guard.h>
 
-static NTSTATUS FilterStartCompletionRoutine([[maybe_unused]] PDEVICE_OBJECT deviceObject,
-    PIRP irp,
-    PVOID context)
-{
-    //
-    // If the lower driver didn't return STATUS_PENDING, we don't need to 
-    // set the event because we won't be waiting on it. 
-    // This optimization avoids grabbing the dispatcher lock, and improves perf.
-    //
-    if (irp->PendingReturned == TRUE) {
-        static_cast<nt::Event*>(context)->Set();
-    }
-
-    //
-    // The dispatch routine will have to call IoCompleteRequest
-    //
-
-    return STATUS_MORE_PROCESSING_REQUIRED;
-}
-
 static NTSTATUS FilterDeviceUsageNotificationCompletionRoutine(PDEVICE_OBJECT deviceObject,
     PIRP irp,
     [[maybe_unused]] PVOID context) {
@@ -75,27 +55,11 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
         // start device has been passed down to the lower drivers.
         //
 
-        nt::Event startCompleted{ NotificationEvent };
-        IoCopyCurrentIrpStackLocationToNext(&irp);
-        IoSetCompletionRoutine(&irp,
-            FilterStartCompletionRoutine,
-            &startCompleted,
-            TRUE,
-            TRUE,
-            TRUE);
-        status = IoCallDriver(m_lowerDevice, &irp);
-
-        //
-        // Wait for lower drivers to be done with the Irp. Important thing to
-        // note here is when you allocate memory for an event in the stack  
-        // you must do a KernelMode wait instead of UserMode to prevent 
-        // the stack from getting paged out.
-        //
-        if (status == STATUS_PENDING) {
-            startCompleted.Wait();
-            status = irp.IoStatus.Status;
+        if (IoForwardIrpSynchronously(m_lowerDevice, &irp) == FALSE) {
+            return nt::Complete(irp, STATUS_UNSUCCESSFUL);
         }
 
+        status = irp.IoStatus.Status;
         if (NT_SUCCESS(status)) {
             //
             // On the way up inherit FILE_REMOVABLE_MEDIA during Start.
