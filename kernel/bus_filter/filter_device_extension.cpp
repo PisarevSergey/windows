@@ -17,6 +17,7 @@ static NTSTATUS FilterDeviceUsageNotificationCompletionRoutine(PDEVICE_OBJECT de
 }
 
 NTSTATUS FilterDeviceExtension::Attach(DEVICE_OBJECT& filterDevice, DEVICE_OBJECT& pdo) {
+
     const auto status = IoAttachDeviceToDeviceStackSafe(&filterDevice, &pdo, &m_lowerDevice);
     if (!NT_SUCCESS(status)) {
         TraceError("IoAttachDeviceToDeviceStackSafe failed", TraceLoggingNTStatus(status));
@@ -40,6 +41,7 @@ NTSTATUS FilterDeviceExtension::Attach(DEVICE_OBJECT& filterDevice, DEVICE_OBJEC
 
 NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
 {
+
     auto status = m_removeLock.Acquire(&irp);
     if (!NT_SUCCESS(status)) {
         return nt::Complete(irp, status);
@@ -89,34 +91,6 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
 
         return status;
 
-    case IRP_MN_QUERY_STOP_DEVICE:
-        status = STATUS_SUCCESS;
-        break;
-
-    case IRP_MN_CANCEL_STOP_DEVICE:
-
-        status = STATUS_SUCCESS; // We must not fail this IRP.
-        break;
-
-    case IRP_MN_STOP_DEVICE:
-        status = STATUS_SUCCESS;
-        break;
-
-    case IRP_MN_QUERY_REMOVE_DEVICE:
-
-        status = STATUS_SUCCESS;
-        break;
-
-    case IRP_MN_SURPRISE_REMOVAL:
-
-        status = STATUS_SUCCESS;
-        break;
-
-    case IRP_MN_CANCEL_REMOVE_DEVICE:
-
-        status = STATUS_SUCCESS; // We must not fail this IRP.
-        break;
-
     case IRP_MN_DEVICE_USAGE_NOTIFICATION:
 
         //
@@ -133,20 +107,8 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
         return nt::SendWithCompletionRoutine(*m_lowerDevice, irp, FilterDeviceUsageNotificationCompletionRoutine);
 
     default:
-        //
-        // If you don't handle any IRP you must leave the
-        // status as is.
-        //
-        status = irp.IoStatus.Status;
-
-        break;
+        return ForwardAndForgetNoRemoveLock(irp);
     }
-
-    //
-    // Pass the IRP down and forget it.
-    //
-    irp.IoStatus.Status = status;
-    return ForwardAndForgetNoRemoveLock(irp);
 }
 
 NTSTATUS FilterDeviceExtension::ForwardAndForget(IRP& irp) {
