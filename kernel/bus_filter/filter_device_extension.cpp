@@ -5,6 +5,7 @@
 static NTSTATUS FilterDeviceUsageNotificationCompletionRoutine(PDEVICE_OBJECT deviceObject,
     PIRP irp,
     [[maybe_unused]] PVOID context) {
+
     if (irp->PendingReturned) {
         IoMarkIrpPending(irp);
     }
@@ -80,7 +81,7 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
         removeLockGuard.release();
         m_removeLock.ReleaseAndWait(&irp);
 
-        status = ForwardAndForgetNoLock(irp);
+        status = ForwardAndForgetNoRemoveLock(irp);
 
         IoDetachDevice(m_lowerDevice);
         this->~FilterDeviceExtension();
@@ -129,18 +130,7 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
             irpStack.DeviceObject->Flags |= DO_POWER_PAGABLE;
         }
 
-        IoCopyCurrentIrpStackLocationToNext(&irp);
-
-        IoSetCompletionRoutine(
-            &irp,
-            FilterDeviceUsageNotificationCompletionRoutine,
-            NULL,
-            TRUE,
-            TRUE,
-            TRUE
-        );
-
-        return IoCallDriver(m_lowerDevice, &irp);
+        return nt::SendWithCompletionRoutine(*m_lowerDevice, irp, FilterDeviceUsageNotificationCompletionRoutine);
 
     default:
         //
@@ -156,7 +146,7 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
     // Pass the IRP down and forget it.
     //
     irp.IoStatus.Status = status;
-    return ForwardAndForgetNoLock(irp);
+    return ForwardAndForgetNoRemoveLock(irp);
 }
 
 NTSTATUS FilterDeviceExtension::ForwardAndForget(IRP& irp) {
@@ -166,7 +156,7 @@ NTSTATUS FilterDeviceExtension::ForwardAndForget(IRP& irp) {
     }
     const auto removeLockGuard = kcpp::scope_guard{ [this, &irp] {m_removeLock.Release(&irp); } };
 
-    return ForwardAndForgetNoLock(irp);
+    return ForwardAndForgetNoRemoveLock(irp);
 }
 
 void FilterDeviceExtension::OnDeviceUsageNotificationComplete(DEVICE_OBJECT& deviceObject,
@@ -181,7 +171,7 @@ void FilterDeviceExtension::OnDeviceUsageNotificationComplete(DEVICE_OBJECT& dev
     }
 }
 
-NTSTATUS FilterDeviceExtension::ForwardAndForgetNoLock(IRP& irp) {
+NTSTATUS FilterDeviceExtension::ForwardAndForgetNoRemoveLock(IRP& irp) {
     IoSkipCurrentIrpStackLocation(&irp);
     return IoCallDriver(m_lowerDevice, &irp);
 }

@@ -20,5 +20,5 @@ private:
     nt::RemoveLock m_removeLock{ 'tlFB', 1, 100 };
     PDEVICE_OBJECT  m_lowerDevice{};
 
-    NTSTATUS ForwardAndForgetNoLock(IRP& irp);
+    NTSTATUS ForwardAndForgetNoRemoveLock(IRP& irp);
 };
