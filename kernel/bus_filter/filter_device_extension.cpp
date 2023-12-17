@@ -44,6 +44,7 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
 
     auto status = m_removeLock.Acquire(&irp);
     if (!NT_SUCCESS(status)) {
+        TraceError("failed to acquire remove lock", TraceLoggingNTStatus(status));
         return nt::Complete(irp, status);
     }
     auto removeLockGuard = kcpp::scope_guard{ [this, &irp] {m_removeLock.Release(&irp); } };
@@ -51,6 +52,7 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
     const auto& irpStack = *IoGetCurrentIrpStackLocation(&irp);
     switch (irpStack.MinorFunction) {
     case IRP_MN_START_DEVICE:
+        TraceInfo("starting device", TraceLoggingPointer(irpStack.DeviceObject));
         //
         // The device is starting.
         // We cannot touch the device (send it any non pnp irps) until a
@@ -73,8 +75,11 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
             return nt::Complete(irp, status);
         }
 
+        TraceCritical("IoForwardIrpSynchronously failed");
+
         break;
     case IRP_MN_REMOVE_DEVICE:
+        TraceInfo("removing device", TraceLoggingPointer(irpStack.DeviceObject));
 
         //
         // Wait for all outstanding requests to complete
@@ -106,7 +111,11 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
         return nt::SendWithCompletionRoutine(*m_lowerDevice, irp, FilterDeviceUsageNotificationCompletionRoutine);
 
     case IRP_MN_QUERY_DEVICE_RELATIONS:
+        TraceVerbose("IRP_MN_QUERY_DEVICE_RELATIONS");
+
         if (irpStack.Parameters.QueryDeviceRelations.Type == BusRelations) {
+            TraceInfo("query bus relations", TraceLoggingPointer(irpStack.DeviceObject));
+
             if (IoForwardIrpSynchronously(m_lowerDevice, &irp)) {
 
                 if (NT_SUCCESS(irp.IoStatus.Status))
@@ -116,6 +125,8 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
 
                 return nt::Complete(irp, irp.IoStatus.Status);
             }
+
+            TraceCritical("IoForwardIrpSynchronously failed");
         }
         break;
     }
@@ -137,7 +148,7 @@ NTSTATUS FilterDeviceExtension::ForwardAndForget(IRP& irp) {
 void FilterDeviceExtension::OnDeviceUsageNotificationComplete(DEVICE_OBJECT& deviceObject,
     PIRP irp) {
 
-    const auto removeLockScopeGuard = [this, irp] { m_removeLock.Release(irp); };
+    KCPP_SCOPE_GUARD(kcpp::make_scope_guard([this, irp] { m_removeLock.Release(irp); }));
 
     // On the way up, pagable might become clear.
     // Mimic the driver below us.
