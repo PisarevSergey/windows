@@ -2,6 +2,11 @@
 
 #include <ntifs.h>
 
+#include <initguid.h>
+
+#include <devpkey.h>
+#include <wdmguid.h>
+
 #include <nt/irp.h>
 #include <nt/remove_lock.h>
 #include <nt/event.h>

@@ -70,6 +70,8 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
                 if (m_lowerDevice->Characteristics & FILE_REMOVABLE_MEDIA) {
                     irpStack.DeviceObject->Characteristics |= FILE_REMOVABLE_MEDIA;
                 }
+
+                OnStart();
             }
 
             return nt::Complete(irp, status);
@@ -179,4 +181,46 @@ void FilterDeviceExtension::DispatchBusRelations([[maybe_unused]] const DEVICE_R
         }
 
     }
+}
+
+void FilterDeviceExtension::OnStart()
+{
+    const auto bthUsbIsInStack = [this] {
+
+        for (nt::AutoReferencedDevice currentDevice{ IoGetAttachedDeviceReference(m_lowerDevice) };
+            currentDevice.get() != nullptr;
+            currentDevice = nt::AutoReferencedDevice{ IoGetLowerDeviceObject(currentDevice.get()) }) {
+
+            constexpr UNICODE_STRING bthUsbDriverName = RTL_CONSTANT_STRING(LR"(\Driver\BTHUSB)");
+            if (RtlEqualUnicodeString(&bthUsbDriverName, &currentDevice->DriverObject->DriverName, TRUE)) {
+                return true;
+            }
+        }
+
+        return false;
+    }();
+
+    if (!bthUsbIsInStack) {
+        TraceInfo("no BTHUSB in stack, won't trace the device");
+        return;
+    }
+    TraceInfo("BTHUSB is in stack");
+
+    nt::AutoReferencedDevice pdo{ IoGetDeviceAttachmentBaseRef(m_lowerDevice) };
+    GUID busType{};
+    ULONG requiredSize{};
+    DEVPROPTYPE propertyType{};
+    const auto status = IoGetDevicePropertyData(pdo.get(), &DEVPKEY_Device_BusTypeGuid, LOCALE_NEUTRAL, 0, sizeof(busType), &busType, &requiredSize, &propertyType);
+    if (!NT_SUCCESS(status)) {
+        TraceError("failed to get DEVPKEY_Device_BusTypeGuid", TraceLoggingNTStatus(status));
+        return;
+    }
+    NT_ASSERT(DEVPROP_TYPE_GUID == propertyType);
+    TraceInfo("Bus type", TraceLoggingGuid(busType));
+
+    if (GUID_BUS_TYPE_USB == busType) {
+        TraceInfo("device is on the USB bus, will trace it");
+        m_interestingDevice = true;
+    }
+
 }

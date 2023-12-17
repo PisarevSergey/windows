@@ -19,8 +19,11 @@ public:
 private:
     nt::RemoveLock m_removeLock{ 'tlFB', 1, 100 };
     PDEVICE_OBJECT  m_lowerDevice{};
+    bool m_interestingDevice{false};
 
     NTSTATUS ForwardAndForgetNoRemoveLock(IRP& irp);
 
     void DispatchBusRelations(const DEVICE_RELATIONS& busRelations);
+
+    void OnStart();
 };
