@@ -1,8 +1,8 @@
 #pragma once
 
-#include <wdm.h>
+#include "object.h"
 
-#include <kcpp/auto_ptr.h>
+//#include <kcpp/auto_ptr.h>
 
 namespace nt
 {
@@ -12,6 +12,8 @@ namespace nt
     };
 
     using AutoDevice = kcpp::auto_ptr<DEVICE_OBJECT, DeviceDeleter>;
+
+    using AutoReferencedDevice = kcpp::auto_ptr<DEVICE_OBJECT, ObjectDereferencer<DEVICE_OBJECT>>;
 
     AutoDevice CreateDevice(NTSTATUS& status,
         DRIVER_OBJECT& driver,

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "macroses.h"
+
 namespace kcpp
 {
     template <typename T>

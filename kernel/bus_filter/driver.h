@@ -2,8 +2,9 @@
 
 class Driver final {
 public:
-    Driver() = default;
+    Driver(PDRIVER_OBJECT driverObject);
 
+    NTSTATUS Attach(DEVICE_OBJECT& device);
 
     Driver(Driver&&) = delete;
 
@@ -11,6 +12,9 @@ public:
     void operator delete(void*, size_t) {}
 private:
     Tracer m_tracer;
+    DRIVER_OBJECT const * const m_driverObject;
+
+    bool AreWeInStackFor(const DEVICE_OBJECT& device) const;
 };
 
 extern Driver& g_driver;

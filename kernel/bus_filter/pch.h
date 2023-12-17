@@ -1,10 +1,11 @@
 #pragma once
 
-#include <ntddk.h>
+#include <ntifs.h>
 
 #include <nt/irp.h>
 #include <nt/remove_lock.h>
 #include <nt/event.h>
+#include <nt/device.h>
 
 #include <trace_logging/trace.h>
 

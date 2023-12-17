@@ -14,6 +14,4 @@ namespace nt
             ObDereferenceObject(object);
         }
     };
-
-    using AutoReferencedDevice = kcpp::auto_ptr<DEVICE_OBJECT, ObjectDereferencer<DEVICE_OBJECT>>;
 }

@@ -129,7 +129,7 @@ NTSTATUS FilterDeviceExtension::ForwardAndForget(IRP& irp) {
     if (!NT_SUCCESS(status)) {
         return nt::Complete(irp, status);
     }
-    const auto removeLockGuard = kcpp::scope_guard{ [this, &irp] {m_removeLock.Release(&irp); } };
+    KCPP_SCOPE_GUARD(kcpp::make_scope_guard([this, &irp] {m_removeLock.Release(&irp); }));
 
     return ForwardAndForgetNoRemoveLock(irp);
 }
@@ -154,4 +154,18 @@ NTSTATUS FilterDeviceExtension::ForwardAndForgetNoRemoveLock(IRP& irp) {
 
 void FilterDeviceExtension::DispatchBusRelations([[maybe_unused]] const DEVICE_RELATIONS& busRelations)
 {
+    for (ULONG i{ 0 }; i != busRelations.Count; ++i) {
+        auto& dev = *busRelations.Objects[i];
+
+        const auto status = g_driver.Attach(dev);
+        if (NT_SUCCESS(status)) {
+            TraceInfo("attached to device", TraceLoggingPointer(&dev));
+        }
+        else {
+            TraceError("failed to attach",
+                TraceLoggingPointer(&dev),
+                TraceLoggingNTStatus(status));
+        }
+
+    }
 }
