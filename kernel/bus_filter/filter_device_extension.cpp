@@ -113,7 +113,6 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
         return nt::SendWithCompletionRoutine(*m_lowerDevice, irp, FilterDeviceUsageNotificationCompletionRoutine);
 
     case IRP_MN_QUERY_DEVICE_RELATIONS:
-        TraceVerbose("IRP_MN_QUERY_DEVICE_RELATIONS");
 
         if (irpStack.Parameters.QueryDeviceRelations.Type == BusRelations) {
             TraceInfo("query bus relations", TraceLoggingPointer(irpStack.DeviceObject));
@@ -147,8 +146,19 @@ NTSTATUS FilterDeviceExtension::ForwardAndForget(IRP& irp) {
     return ForwardAndForgetNoRemoveLock(irp);
 }
 
-void FilterDeviceExtension::OnDeviceUsageNotificationComplete(DEVICE_OBJECT& deviceObject,
-    PIRP irp) {
+void FilterDeviceExtension::ReportInternalIoctl(IRP& irp) const {
+
+    if (m_interestingDevice) {
+        const auto& stackLocation = *IoGetCurrentIrpStackLocation(&irp);
+        NT_ASSERT(stackLocation.MajorFunction == IRP_MJ_INTERNAL_DEVICE_CONTROL);
+
+        if (IOCTL_INTERNAL_USB_SUBMIT_URB == stackLocation.Parameters.DeviceIoControl.IoControlCode) {
+            Report(*static_cast<URB*>(URB_FROM_IRP(&irp)));
+        }
+    }
+}
+
+void FilterDeviceExtension::OnDeviceUsageNotificationComplete(DEVICE_OBJECT& deviceObject, PIRP irp) {
 
     KCPP_SCOPE_GUARD(kcpp::make_scope_guard([this, irp] { m_removeLock.Release(irp); }));
 

@@ -11,6 +11,8 @@ public:
 
     NTSTATUS ForwardAndForget(IRP& irp);
 
+    void ReportInternalIoctl(IRP& irp) const;
+
     void OnDeviceUsageNotificationComplete(DEVICE_OBJECT& deviceObject, PIRP irp);
 
     FilterDeviceExtension(FilterDeviceExtension&&) = delete;

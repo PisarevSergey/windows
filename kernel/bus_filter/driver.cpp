@@ -10,11 +10,19 @@ NTSTATUS DefaultDispatch(PDEVICE_OBJECT deviceObject, PIRP irp) {
     return deviceExtension->ForwardAndForget(*irp);
 }
 
-NTSTATUS DispatchPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
+static NTSTATUS DispatchInternalIoctl(PDEVICE_OBJECT deviceObject, PIRP irp) {
+
+    static_cast<FilterDeviceExtension*>(deviceObject->DeviceExtension)->ReportInternalIoctl(*irp);
+
+    return DefaultDispatch(deviceObject, irp);
+}
+
+static NTSTATUS DispatchPnp(PDEVICE_OBJECT DeviceObject, PIRP Irp) {
+
     return static_cast<FilterDeviceExtension*>(DeviceObject->DeviceExtension)->DispatchPnp(*Irp);
 }
 
-NTSTATUS AddDevice([[maybe_unused]] __in PDRIVER_OBJECT DriverObject,
+static NTSTATUS AddDevice([[maybe_unused]] __in PDRIVER_OBJECT DriverObject,
     __in PDEVICE_OBJECT PhysicalDeviceObject)
 {
     TraceInfo("AddDevice for", TraceLoggingPointer(PhysicalDeviceObject));
@@ -48,7 +56,9 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT driverObject,
         majorFunction = DefaultDispatch;
     }
 
+    driverObject->MajorFunction[IRP_MJ_INTERNAL_DEVICE_CONTROL] = DispatchInternalIoctl;
     driverObject->MajorFunction[IRP_MJ_PNP] = DispatchPnp;
+
     driverObject->DriverExtension->AddDevice = AddDevice;
     driverObject->DriverUnload = Unload;
 
