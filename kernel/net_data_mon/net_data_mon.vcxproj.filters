@@ -33,12 +33,10 @@
     <ClCompile Include="callouts.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="bfe_registration.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="flow_v6.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="bfe_registration.ixx" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="driver.h">
@@ -48,9 +46,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="callouts.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="bfe_registration.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="flow_v6.h">
