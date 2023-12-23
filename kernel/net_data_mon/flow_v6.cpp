@@ -1,5 +1,12 @@
-#include "pch.h"
+#include <ntifs.h>
+#include <trace_logging/trace.h>
 
+#include <fwpsk.h>
+#include <fwpmk.h>
+
+#include "flow_v6.h"
+
+#include <wfp/util.h>
 #include <wfp/flow_v6_decode.h>
 
 void flow::v6::classify(const FWPS_INCOMING_VALUES0* inFixedValues,

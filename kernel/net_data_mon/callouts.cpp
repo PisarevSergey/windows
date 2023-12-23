@@ -1,4 +1,6 @@
-#include "pch.h"
+#include <trace_logging/trace.h>
+
+#include "callouts.h"
 
 NTSTATUS Callouts::Init(DEVICE_OBJECT& wfpDeviceObject)
 {

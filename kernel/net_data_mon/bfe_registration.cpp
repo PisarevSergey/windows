@@ -1,4 +1,9 @@
-#include "pch.h"
+#include <trace_logging/trace.h>
+
+#include <fwpmk.h>
+
+#include "bfe_registration.h"
+#include "callouts.h"
 
 #include <kcpp/scope_guard.h>
 

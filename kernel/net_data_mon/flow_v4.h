@@ -1,5 +1,8 @@
 #pragma once
 
+#include <fwpsk.h>
+#include <fwpmk.h>
+
 namespace flow
 {
     namespace v4

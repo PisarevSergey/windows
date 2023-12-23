@@ -1,5 +1,8 @@
-#include "pch.h"
+#include <ntifs.h>
+#include <trace_logging/trace.h>
+#include "flow_v4.h"
 
+#include <wfp/util.h>
 #include <wfp/flow_v4_decode.h>
 
 void flow::v4::classify(const FWPS_INCOMING_VALUES0* inFixedValues,
