@@ -11,6 +11,31 @@ module;
 
 export module bfe_registration;
 
+struct BfeCloser final {
+    void operator()(HANDLE h) const;
+};
+export using AutoBfe = kcpp::auto_ptr<HANDLE, BfeCloser>;
+
+export AutoBfe CreateBfeObjects(NTSTATUS& status);
+
+struct BfeChangeHandleReleaser final {
+    void operator()(HANDLE changeHandle) const;
+};
+using AutoBfeChangeHandle = kcpp::auto_ptr<HANDLE, BfeChangeHandleReleaser>;
+
+export class BfeStateSubscriber final {
+public:
+    BfeStateSubscriber() = default;
+
+    [[nodiscard]]
+    NTSTATUS Init(void* deviceObject, FWPM_SERVICE_STATE_CHANGE_CALLBACK0 callback, void* context = nullptr);
+
+    BfeStateSubscriber(BfeStateSubscriber&&) = delete;
+private:
+    AutoBfeChangeHandle m_changeHandle;
+};
+
+
 namespace {
     wchar_t sessionName[]{ L"NetDataMon session" };
     wchar_t sessionDescription[]{ L"NetDataMon session description" };
@@ -131,20 +156,16 @@ namespace {
     }
 }
 
-struct BfeCloser final {
-    void operator()(HANDLE h) const {
-        const auto status = FwpmEngineClose(h);
-        if (STATUS_SUCCESS != status) {
-            TraceCritical("FwpmEngineClose failed", TraceLoggingNTStatus(status));
-        }
-
-        NT_ASSERT(STATUS_SUCCESS == status);
+void BfeCloser::operator()(HANDLE h) const {
+    const auto status = FwpmEngineClose(h);
+    if (STATUS_SUCCESS != status) {
+        TraceCritical("FwpmEngineClose failed", TraceLoggingNTStatus(status));
     }
-};
 
-export using AutoBfe = kcpp::auto_ptr<HANDLE, BfeCloser>;
+    NT_ASSERT(STATUS_SUCCESS == status);
+}
 
-export AutoBfe CreateBfeObjects(NTSTATUS& status) {
+AutoBfe CreateBfeObjects(NTSTATUS& status) {
     constexpr FWPM_SESSION sessionParams {
         .sessionKey{ 0xf64af6cd, 0xc098, 0x4cb0, { 0x81, 0xd7, 0xdb, 0x7f, 0xb9, 0x9e, 0x37, 0x4c }},
         .displayData{.name{sessionName}, .description{sessionDescription}},
@@ -170,40 +191,26 @@ export AutoBfe CreateBfeObjects(NTSTATUS& status) {
     return engine;
 }
 
-struct BfeChangeHandleReleaser final {
-    void operator()(HANDLE changeHandle) const {
-        const auto status = FwpmBfeStateUnsubscribeChanges(changeHandle);
-        if (STATUS_SUCCESS == status) {
-            TraceInfo("FwpmBfeStateUnsubscribeChanges success");
-        }
-        else {
-            TraceCritical("FwpmBfeStateUnsubscribeChanges failed", TraceLoggingNTStatus(status));
-        }
-
-        NT_ASSERT(STATUS_SUCCESS == status);
+void BfeChangeHandleReleaser::operator()(HANDLE changeHandle) const {
+    const auto status = FwpmBfeStateUnsubscribeChanges(changeHandle);
+    if (STATUS_SUCCESS == status) {
+        TraceInfo("FwpmBfeStateUnsubscribeChanges success");
     }
-};
-
-using AutoBfeChangeHandle = kcpp::auto_ptr<HANDLE, BfeChangeHandleReleaser>;
-
-export class BfeStateSubscriber final {
-public:
-    BfeStateSubscriber() = default;
-
-    [[nodiscard]]
-    NTSTATUS Init(void* deviceObject, FWPM_SERVICE_STATE_CHANGE_CALLBACK0 callback, void* context = nullptr) {
-        HANDLE changeHandle{};
-        const auto status = FwpmBfeStateSubscribeChanges(deviceObject, callback, context, &changeHandle);
-        if (STATUS_SUCCESS != status) {
-            TraceError("FwpmBfeStateSubscribeChanges failed", TraceLoggingNTStatus(status));
-            return status;
-        }
-
-        m_changeHandle.reset(changeHandle);
-        return STATUS_SUCCESS;
+    else {
+        TraceCritical("FwpmBfeStateUnsubscribeChanges failed", TraceLoggingNTStatus(status));
     }
 
-    BfeStateSubscriber(BfeStateSubscriber&&) = delete;
-private:
-    AutoBfeChangeHandle m_changeHandle;
-};
+    NT_ASSERT(STATUS_SUCCESS == status);
+}
+
+NTSTATUS BfeStateSubscriber::Init(void* deviceObject, FWPM_SERVICE_STATE_CHANGE_CALLBACK0 callback, void* context) {
+    HANDLE changeHandle{};
+    const auto status = FwpmBfeStateSubscribeChanges(deviceObject, callback, context, &changeHandle);
+    if (STATUS_SUCCESS != status) {
+        TraceError("FwpmBfeStateSubscribeChanges failed", TraceLoggingNTStatus(status));
+        return status;
+    }
+
+    m_changeHandle.reset(changeHandle);
+    return STATUS_SUCCESS;
+}
