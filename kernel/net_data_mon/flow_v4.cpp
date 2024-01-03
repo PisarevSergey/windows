@@ -1,10 +1,4 @@
-#include <ntifs.h>
-#include <trace_logging/trace.h>
-
-#include <fwpsk.h>
-#include <fwpmk.h>
-
-#include "flow_v4.h"
+#include "pch.h"
 
 #include <wfp/util.h>
 #include <wfp/flow_v4_decode.h>
