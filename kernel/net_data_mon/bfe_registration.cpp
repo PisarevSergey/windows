@@ -1,40 +1,9 @@
-module;
-
 #include <trace_logging/trace.h>
 
-#include <fwpmk.h>
-
 #include "callouts.h"
+#include "bfe_registration.h"
 
 #include <kcpp/scope_guard.h>
-#include <kcpp/auto_ptr.h>
-
-export module bfe_registration;
-
-struct BfeCloser final {
-    void operator()(HANDLE h) const;
-};
-export using AutoBfe = kcpp::auto_ptr<HANDLE, BfeCloser>;
-
-export AutoBfe CreateBfeObjects(NTSTATUS& status);
-
-struct BfeChangeHandleReleaser final {
-    void operator()(HANDLE changeHandle) const;
-};
-using AutoBfeChangeHandle = kcpp::auto_ptr<HANDLE, BfeChangeHandleReleaser>;
-
-export class BfeStateSubscriber final {
-public:
-    BfeStateSubscriber() = default;
-
-    [[nodiscard]]
-    NTSTATUS Init(void* deviceObject, FWPM_SERVICE_STATE_CHANGE_CALLBACK0 callback, void* context = nullptr);
-
-    BfeStateSubscriber(BfeStateSubscriber&&) = delete;
-private:
-    AutoBfeChangeHandle m_changeHandle;
-};
-
 
 namespace {
     wchar_t sessionName[]{ L"NetDataMon session" };
@@ -166,7 +135,7 @@ void BfeCloser::operator()(HANDLE h) const {
 }
 
 AutoBfe CreateBfeObjects(NTSTATUS& status) {
-    constexpr FWPM_SESSION sessionParams {
+    constexpr FWPM_SESSION sessionParams{
         .sessionKey{ 0xf64af6cd, 0xc098, 0x4cb0, { 0x81, 0xd7, 0xdb, 0x7f, 0xb9, 0x9e, 0x37, 0x4c }},
         .displayData{.name{sessionName}, .description{sessionDescription}},
         .flags{FWPM_SESSION_FLAG_DYNAMIC},

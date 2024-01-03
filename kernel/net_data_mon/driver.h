@@ -7,8 +7,7 @@
 #include <trace_logging/trace.h>
 
 #include "callouts.h"
-
-import bfe_registration;
+#include "bfe_registration.h"
 
 class ClientCommunicationPort final
 {

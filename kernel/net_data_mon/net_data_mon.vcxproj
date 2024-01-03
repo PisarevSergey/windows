@@ -172,13 +172,14 @@
     <FilesToPackage Include="$(TargetPath)" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="bfe_registration.ixx" />
+    <ClCompile Include="bfe_registration.cpp" />
     <ClCompile Include="callouts.cpp" />
     <ClCompile Include="driver.cpp" />
     <ClCompile Include="flow_v4.cpp" />
     <ClCompile Include="flow_v6.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="bfe_registration.h" />
     <ClInclude Include="callouts.h" />
     <ClInclude Include="driver.h" />
     <ClInclude Include="flow_v4.h" />
