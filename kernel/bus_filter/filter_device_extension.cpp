@@ -50,9 +50,11 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
     auto removeLockGuard = kcpp::scope_guard{ [this, &irp] {m_removeLock.Release(&irp); } };
 
     const auto& irpStack = *IoGetCurrentIrpStackLocation(&irp);
+    auto filterDeviceObject = irpStack.DeviceObject;
+
     switch (irpStack.MinorFunction) {
     case IRP_MN_START_DEVICE:
-        TraceInfo("starting device", TraceLoggingPointer(irpStack.DeviceObject));
+        TraceInfo("starting device", TraceLoggingPointer(filterDeviceObject));
         //
         // The device is starting.
         // We cannot touch the device (send it any non pnp irps) until a
@@ -68,7 +70,7 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
                 // This characteristic is available only after the driver stack is started!.
                 //
                 if (m_lowerDevice->Characteristics & FILE_REMOVABLE_MEDIA) {
-                    irpStack.DeviceObject->Characteristics |= FILE_REMOVABLE_MEDIA;
+                    filterDeviceObject->Characteristics |= FILE_REMOVABLE_MEDIA;
                 }
 
                 OnStart();
@@ -81,7 +83,7 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
 
         break;
     case IRP_MN_REMOVE_DEVICE:
-        TraceInfo("removing device", TraceLoggingPointer(irpStack.DeviceObject));
+        TraceInfo("removing device", TraceLoggingPointer(filterDeviceObject));
 
         //
         // Wait for all outstanding requests to complete
@@ -93,7 +95,7 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
 
         IoDetachDevice(m_lowerDevice);
         this->~FilterDeviceExtension();
-        IoDeleteDevice(irpStack.DeviceObject);
+        IoDeleteDevice(filterDeviceObject);
 
         return status;
 
@@ -104,10 +106,10 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
         // above us. If no one is above us, just set pagable.
         //
 #pragma prefast(suppress:__WARNING_INACCESSIBLE_MEMBER)
-        if ((irpStack.DeviceObject->AttachedDevice == NULL) ||
-            (irpStack.DeviceObject->AttachedDevice->Flags & DO_POWER_PAGABLE)) {
+        if ((filterDeviceObject->AttachedDevice == NULL) ||
+            (filterDeviceObject->AttachedDevice->Flags & DO_POWER_PAGABLE)) {
 
-            irpStack.DeviceObject->Flags |= DO_POWER_PAGABLE;
+            filterDeviceObject->Flags |= DO_POWER_PAGABLE;
         }
 
         return nt::SendWithCompletionRoutine(*m_lowerDevice, irp, FilterDeviceUsageNotificationCompletionRoutine);
@@ -115,7 +117,7 @@ NTSTATUS FilterDeviceExtension::DispatchPnp(IRP& irp)
     case IRP_MN_QUERY_DEVICE_RELATIONS:
 
         if (irpStack.Parameters.QueryDeviceRelations.Type == BusRelations) {
-            TraceInfo("query bus relations", TraceLoggingPointer(irpStack.DeviceObject));
+            TraceInfo("query bus relations", TraceLoggingPointer(filterDeviceObject));
 
             if (IoForwardIrpSynchronously(m_lowerDevice, &irp)) {
 
