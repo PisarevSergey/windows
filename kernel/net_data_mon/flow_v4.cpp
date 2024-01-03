@@ -1,5 +1,9 @@
 #include <ntifs.h>
 #include <trace_logging/trace.h>
+
+#include <fwpsk.h>
+#include <fwpmk.h>
+
 #include "flow_v4.h"
 
 #include <wfp/util.h>

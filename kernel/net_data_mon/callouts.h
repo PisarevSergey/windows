@@ -1,5 +1,8 @@
 #pragma once
 
+#include <fwpsk.h>
+#include <fwpmk.h>
+
 #include "flow_v4.h"
 #include "flow_v6.h"
 
