@@ -10,6 +10,13 @@ NTSTATUS DefaultDispatch(PDEVICE_OBJECT deviceObject, PIRP irp) {
     return deviceExtension->ForwardAndForget(*irp);
 }
 
+static NTSTATUS DispatchIoctl(PDEVICE_OBJECT deviceObject, PIRP irp) {
+
+    static_cast<FilterDeviceExtension*>(deviceObject->DeviceExtension)->ReportIoctl(*irp);
+
+    return DefaultDispatch(deviceObject, irp);
+}
+
 static NTSTATUS DispatchInternalIoctl(PDEVICE_OBJECT deviceObject, PIRP irp) {
 
     static_cast<FilterDeviceExtension*>(deviceObject->DeviceExtension)->ReportInternalIoctl(*irp);
@@ -56,6 +63,7 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT driverObject,
         majorFunction = DefaultDispatch;
     }
 
+    driverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DispatchIoctl;
     driverObject->MajorFunction[IRP_MJ_INTERNAL_DEVICE_CONTROL] = DispatchInternalIoctl;
     driverObject->MajorFunction[IRP_MJ_PNP] = DispatchPnp;
 

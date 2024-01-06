@@ -1,6 +1,9 @@
 #include "pch.h"
 
 namespace {
+    inline bool flag_on(const ULONG value, const ULONG flag) {
+        return ((value & flag) == flag);
+    }
 
     const char* UrbFunctionToString(USHORT function) {
 
@@ -71,11 +74,10 @@ namespace {
     void Report(const _URB_BULK_OR_INTERRUPT_TRANSFER& urb) {
         const auto transferFlags = urb.TransferFlags;
 
-        if (transferFlags & USBD_TRANSFER_DIRECTION_IN) {
+        if (flag_on(transferFlags, USBD_TRANSFER_DIRECTION_IN)) {
             TraceInfo("USBD_TRANSFER_DIRECTION_IN");
         }
-
-        if (transferFlags & USBD_TRANSFER_DIRECTION_OUT) {
+        else {
             TraceInfo("USBD_TRANSFER_DIRECTION_OUT");
         }
     }
@@ -83,16 +85,26 @@ namespace {
     void Report(const _URB_CONTROL_TRANSFER& urb) {
         const auto transferFlags = urb.TransferFlags;
 
-        if (transferFlags & USBD_TRANSFER_DIRECTION_IN) {
+        if (flag_on(transferFlags,USBD_TRANSFER_DIRECTION_IN)) {
             TraceInfo("USBD_TRANSFER_DIRECTION_IN");
         }
-
-        if (transferFlags & USBD_TRANSFER_DIRECTION_OUT) {
+        else {
             TraceInfo("USBD_TRANSFER_DIRECTION_OUT");
         }
 
-        if (transferFlags & USBD_DEFAULT_PIPE_TRANSFER) {
+        if (flag_on(transferFlags, USBD_DEFAULT_PIPE_TRANSFER)) {
             TraceInfo("USBD_DEFAULT_PIPE_TRANSFER");
+        }
+
+        TraceInfo("Pipe handle", TraceLoggingValue(urb.PipeHandle));
+        TraceInfo("Transfer Buffer Length", TraceLoggingValue(urb.TransferBufferLength));
+        TraceInfo("Transfer buffer", TraceLoggingValue(urb.TransferBuffer));
+        TraceInfo("Trasfer buffer MDL", TraceLoggingPointer(urb.TransferBufferMDL));
+        TraceInfo("USB request setup packet", TraceLoggingBinary(urb.SetupPacket, sizeof(urb.SetupPacket)));
+
+        if (urb.TransferBufferLength && urb.TransferBuffer)
+        {
+            TraceInfo("Control Transfer Buffer", TraceLoggingBinary(urb.TransferBuffer, urb.TransferBufferLength));
         }
     }
 }

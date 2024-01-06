@@ -11,6 +11,7 @@ public:
 
     NTSTATUS ForwardAndForget(IRP& irp);
 
+    void ReportIoctl(IRP& irp) const;
     void ReportInternalIoctl(IRP& irp) const;
 
     void OnDeviceUsageNotificationComplete(DEVICE_OBJECT& deviceObject, PIRP irp);

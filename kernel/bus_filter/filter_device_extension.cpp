@@ -148,6 +148,16 @@ NTSTATUS FilterDeviceExtension::ForwardAndForget(IRP& irp) {
     return ForwardAndForgetNoRemoveLock(irp);
 }
 
+void FilterDeviceExtension::ReportIoctl(IRP& irp) const {
+
+    if (m_interestingDevice) {
+        const auto& stackLocation = *IoGetCurrentIrpStackLocation(&irp);
+        NT_ASSERT(stackLocation.MajorFunction == IRP_MJ_DEVICE_CONTROL);
+
+        TraceInfo("ioctl");
+    }
+}
+
 void FilterDeviceExtension::ReportInternalIoctl(IRP& irp) const {
 
     if (m_interestingDevice) {
