@@ -106,8 +106,7 @@ namespace {
         if (flags & USBD_TRANSFER_DIRECTION_IN) {
             TraceInfo("USBD_TRANSFER_DIRECTION_IN");
         }
-
-        if (flags & USBD_TRANSFER_DIRECTION_OUT) {
+        else {
             TraceInfo("USBD_TRANSFER_DIRECTION_OUT");
         }
 
@@ -155,7 +154,6 @@ namespace {
         [[maybe_unused]] size_t InputBufferLength,
         ULONG IoControlCode) {
         auto forwardGuard = kcpp::scope_guard([request, queue] { ForwardAndForget(request, queue); });
-        if (GetUsbFilterContext(WdfIoQueueGetDevice(queue))->IsPassthrough()) { return; }
         TraceInfo("ioctl", TraceLoggingHexULong(IoControlCode));
     }
 
@@ -166,7 +164,6 @@ namespace {
         ULONG code){
 
         auto forwardGuard = kcpp::scope_guard([request, queue] { ForwardAndForget(request, queue); });
-        if (GetUsbFilterContext(WdfIoQueueGetDevice(queue))->IsPassthrough()) { return; }
 
         const auto requestParams = kmdf::GetRequestParameters(request);
         NT_ASSERT(requestParams.Type == WdfRequestTypeDeviceControlInternal);
@@ -192,7 +189,6 @@ namespace {
         size_t length
     ) {
         auto forwardGuard = kcpp::scope_guard([request, queue] { ForwardAndForget(request, queue); });
-        if (GetUsbFilterContext(WdfIoQueueGetDevice(queue))->IsPassthrough()) { return; }
         TraceInfo("read", TraceLoggingValue(length));
     }
 
@@ -200,73 +196,27 @@ namespace {
         WDFREQUEST request,
         size_t length) {
         auto forwardGuard = kcpp::scope_guard([request, queue] { ForwardAndForget(request, queue); });
-        if (GetUsbFilterContext(WdfIoQueueGetDevice(queue))->IsPassthrough()) { return; }
         TraceInfo("write", TraceLoggingValue(length));
     }
-}
-
-void FilterDeviceContextCleanup(WDFOBJECT filterDevice) {
-    auto context = GetUsbFilterContext(filterDevice);
-
-    if (context->Flink && context->Blink) { // context was inserted in global list
-        g_driver.Remove(*context);
-    }
-
-    context->~UsbFilterDeviceContext();
 }
 
 NTSTATUS AddDevice([[maybe_unused]] WDFDRIVER driver, PWDFDEVICE_INIT deviceInit) {
     WdfFdoInitSetFilter(deviceInit);
 
-    auto filterDeviceAttributes = kmdf::CreateObjectAttributes(nullptr, FilterDeviceContextCleanup);
-    WDF_OBJECT_ATTRIBUTES_SET_CONTEXT_TYPE(&filterDeviceAttributes, UsbFilterDeviceContext);
-
     WDFDEVICE filterDevice{};
-    auto status = WdfDeviceCreate(&deviceInit, &filterDeviceAttributes, &filterDevice);
+    auto status = WdfDeviceCreate(&deviceInit, WDF_NO_OBJECT_ATTRIBUTES, &filterDevice);
     if (STATUS_SUCCESS != status) {
         TraceError("WdfDeviceCreate failed to create filter device", TraceLoggingNTStatus(status));
         return status;
     }
 
-    auto filterContext = new(GetUsbFilterContext(filterDevice)) UsbFilterDeviceContext;
+    const auto busType = GetDeviceBus(filterDevice);
+    if (busType != GUID_BUS_TYPE_USB) {
 
-    const auto deviceClass = GetDeviceClass(filterDevice);
-    TraceVerbose("attaching ?; device class", TraceLoggingValue(deviceClass));
-
-    if (deviceClass != GUID_DEVCLASS_USB) { // do not attach to anything other than USB
-        TraceInfo("device class is not USB, won't attach", TraceLoggingValue(deviceClass));
-
-        if ((deviceClass == GUID_DEVCLASS_BLUETOOTH) &&
-            (GetDeviceBus(filterDevice) == GUID_BUS_TYPE_USB)) { // root BTH device
-            TraceInfo("root BTH device");
-
-            auto parentIdMemory = kmdf::AllocAndQueryDeviceProperty(status, filterDevice, DEVPKEY_Device_Parent, filterDevice);
-            if (!NT_SUCCESS(status)) {
-                TraceError("kmdf::AllocAndQueryDeviceProperty failed to get DEVPKEY_Device_Parent", TraceLoggingNTStatus(status));
-                return status;
-            }
-
-            auto parentId = helpers::ToStringView(status, parentIdMemory);
-            if (!NT_SUCCESS(status)) {
-                TraceError("failed to convert parent id to string", TraceLoggingNTStatus(status));
-                return status;
-            }
-            TraceInfo("ParentId", TraceLoggingUnicodeString(&parentId));
-
-            g_driver.StartFilterUsbDevice(parentId);
-        }
-
+        TraceInfo("do not attach", TraceLoggingValue(busType));
         return STATUS_FLT_DO_NOT_ATTACH;
     }
-
-    status = filterContext->Init(filterDevice);
-    if (!NT_SUCCESS(status))
-    {
-        TraceError("SetInstanceId failed", TraceLoggingNTStatus(status));
-        return status;
-    }
-    TraceInfo("Instance ID", TraceLoggingUnicodeString(&filterContext->GetInstanceId()));
-    g_driver.Insert(*filterContext);
+    TraceInfo("root BTH device");
 
     auto queueConfig = kmdf::CreateQueueConfig();
     queueConfig.EvtIoDeviceControl = OnIoctl;

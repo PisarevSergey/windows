@@ -39,18 +39,3 @@ extern "C" NTSTATUS DriverEntry(PDRIVER_OBJECT driverObject, PUNICODE_STRING reg
     TraceInfo("driver initialization success");
     return STATUS_SUCCESS;
 }
-
-void Driver::Insert(UsbFilterDeviceContext& context)
-{
-    m_usbFilters.Insert(context);
-}
-
-void Driver::Remove(UsbFilterDeviceContext& context)
-{
-    m_usbFilters.Remove(context);
-}
-
-void Driver::StartFilterUsbDevice(const UNICODE_STRING& deviceId)
-{
-    m_usbFilters.StartFilterUsbDevice(deviceId);
-}

@@ -28,9 +28,6 @@
     <ClCompile Include="filter_device.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="usb_filter_device_context.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="helpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -43,9 +40,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="filter_device.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="usb_filter_device_context.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="helpers.h">

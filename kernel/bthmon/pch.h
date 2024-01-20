@@ -24,6 +24,5 @@
 #include <usb.h>
 
 #include "helpers.h"
-#include "usb_filter_device_context.h"
 #include "filter_device.h"
 #include "driver.h"
