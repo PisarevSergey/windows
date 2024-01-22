@@ -126,8 +126,8 @@ namespace {
         };
 
         constexpr Properties propertiesToReport[]{
-            {L"DEVPKEY_DeviceContainer_DeviceDescription1", DEVPKEY_DeviceContainer_DeviceDescription1},
-            {L"DEVPKEY_DeviceContainer_DeviceDescription2", DEVPKEY_DeviceContainer_DeviceDescription2},
+            //{L"DEVPKEY_DeviceContainer_DeviceDescription1", DEVPKEY_DeviceContainer_DeviceDescription1},
+            //{L"DEVPKEY_DeviceContainer_DeviceDescription2", DEVPKEY_DeviceContainer_DeviceDescription2},
             {L"DEVPKEY_Device_Stack", DEVPKEY_Device_Stack}
         };
 
@@ -136,7 +136,7 @@ namespace {
             NTSTATUS status{};
             const auto currentProperty = kmdf::AllocAndQueryDeviceProperty(status, device, prop.prop);
             if (STATUS_SUCCESS == status) {
-                TraceInfo("reporting property", TraceLoggingWideString(prop.name));
+                TraceInfo("reporting property", TraceLoggingWideString(prop.name, "property name"), TraceLoggingPointer(device));
                 PrintStrings(currentProperty);
 
                 WdfObjectDelete(currentProperty);
@@ -201,7 +201,17 @@ namespace {
         [[maybe_unused]] size_t InputBufferLength,
         ULONG IoControlCode) {
         auto forwardGuard = kcpp::scope_guard([request, queue] { ForwardAndForget(request, queue); });
-        TraceInfo("ioctl", TraceLoggingHexULong(IoControlCode));
+
+        switch (IoControlCode) {
+        case IOCTL_USB_GET_NODE_CONNECTION_INFORMATION_EX:
+            TraceInfo("IOCTL_USB_GET_NODE_CONNECTION_INFORMATION_EX", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
+            break;
+        case IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION:
+            TraceInfo("IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
+            break;
+        default:
+            TraceInfo("ioctl", TraceLoggingHexULong(IoControlCode), TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
+        }
     }
 
     void OnInternalIoctl(WDFQUEUE queue,
@@ -218,34 +228,34 @@ namespace {
         switch (code) {
         case IOCTL_INTERNAL_USB_SUBMIT_URB:
         {
-            TraceInfo("IOCTL_INTERNAL_USB_SUBMIT_URB");
+            TraceInfo("IOCTL_INTERNAL_USB_SUBMIT_URB", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
             const auto& urb = *static_cast<URB*>(requestParams.Parameters.Others.Arg1);
             Report(urb.UrbHeader);
         }
             break;
         case IOCTL_INTERNAL_USB_SUBMIT_IDLE_NOTIFICATION:
-            TraceInfo("IOCTL_INTERNAL_USB_SUBMIT_IDLE_NOTIFICATION");
+            TraceInfo("IOCTL_INTERNAL_USB_SUBMIT_IDLE_NOTIFICATION", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
             break;
         case IOCTL_INTERNAL_USB_REGISTER_COMPOSITE_DEVICE:
-            TraceInfo("IOCTL_INTERNAL_USB_REGISTER_COMPOSITE_DEVICE");
+            TraceInfo("IOCTL_INTERNAL_USB_REGISTER_COMPOSITE_DEVICE", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
             break;
         case IOCTL_INTERNAL_USB_UNREGISTER_COMPOSITE_DEVICE:
-            TraceInfo("IOCTL_INTERNAL_USB_UNREGISTER_COMPOSITE_DEVICE");
+            TraceInfo("IOCTL_INTERNAL_USB_UNREGISTER_COMPOSITE_DEVICE", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
             break;
         case IOCTL_INTERNAL_USB_REQUEST_REMOTE_WAKE_NOTIFICATION:
-            TraceInfo("IOCTL_INTERNAL_USB_REQUEST_REMOTE_WAKE_NOTIFICATION");
+            TraceInfo("IOCTL_INTERNAL_USB_REQUEST_REMOTE_WAKE_NOTIFICATION", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
             break;
         case IOCTL_ACPI_ENUM_CHILDREN:
-            TraceInfo("IOCTL_ACPI_ENUM_CHILDREN");
+            TraceInfo("IOCTL_ACPI_ENUM_CHILDREN", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
             break;
         case IOCTL_ACPI_EVAL_METHOD_EX:
-            TraceInfo("IOCTL_ACPI_EVAL_METHOD_EX");
+            TraceInfo("IOCTL_ACPI_EVAL_METHOD_EX", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
             break;
         case IOCTL_INTERNAL_USB_GET_TOPOLOGY_ADDRESS:
-            TraceInfo("IOCTL_INTERNAL_USB_GET_TOPOLOGY_ADDRESS");
+            TraceInfo("IOCTL_INTERNAL_USB_GET_TOPOLOGY_ADDRESS", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
             break;
         default:
-            TraceInfo("internal ioctl", TraceLoggingHexULong(code));
+            TraceInfo("internal ioctl", TraceLoggingHexULong(code), TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
         }
     }
 
@@ -254,18 +264,19 @@ namespace {
         size_t length
     ) {
         auto forwardGuard = kcpp::scope_guard([request, queue] { ForwardAndForget(request, queue); });
-        TraceInfo("read", TraceLoggingValue(length));
+        TraceInfo("read", TraceLoggingValue(length), TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
     }
 
     void OnWrite(WDFQUEUE queue,
         WDFREQUEST request,
         size_t length) {
         auto forwardGuard = kcpp::scope_guard([request, queue] { ForwardAndForget(request, queue); });
-        TraceInfo("write", TraceLoggingValue(length));
+        TraceInfo("write", TraceLoggingValue(length), TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
     }
 }
 
 NTSTATUS AddDevice([[maybe_unused]] WDFDRIVER driver, PWDFDEVICE_INIT deviceInit) {
+
     WdfFdoInitSetFilter(deviceInit);
 
     WDFDEVICE filterDevice{};
