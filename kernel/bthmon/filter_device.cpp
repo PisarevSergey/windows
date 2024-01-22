@@ -100,6 +100,53 @@ namespace {
         }
     }
 
+    void PrintStrings(WDFMEMORY strings) {
+
+        size_t bufferSize{};
+        auto stringsBuffer = static_cast<const wchar_t*>(WdfMemoryGetBuffer(strings, &bufferSize));
+        bufferSize /= sizeof(wchar_t);
+
+        size_t currentStringLength{};
+        for (auto status = RtlStringCchLengthW(stringsBuffer, bufferSize, &currentStringLength);
+            STATUS_SUCCESS == status;
+            (stringsBuffer += (currentStringLength + 1)),
+            (bufferSize -= (currentStringLength + 1)),
+            status = RtlStringCchLengthW(stringsBuffer, bufferSize, &currentStringLength)) {
+            if (currentStringLength > 0) {
+                TraceInfo("", TraceLoggingWideString(stringsBuffer, ""));
+            }
+        }
+    }
+
+    void Report(WDFDEVICE device) {
+
+        struct Properties {
+            const wchar_t* name;
+            const DEVPROPKEY& prop;
+        };
+
+        constexpr Properties propertiesToReport[]{
+            {L"DEVPKEY_DeviceContainer_DeviceDescription1", DEVPKEY_DeviceContainer_DeviceDescription1},
+            {L"DEVPKEY_DeviceContainer_DeviceDescription2", DEVPKEY_DeviceContainer_DeviceDescription2},
+            {L"DEVPKEY_Device_Stack", DEVPKEY_Device_Stack}
+        };
+
+        for (const auto& prop : propertiesToReport) {
+
+            NTSTATUS status{};
+            const auto currentProperty = kmdf::AllocAndQueryDeviceProperty(status, device, prop.prop);
+            if (STATUS_SUCCESS == status) {
+                TraceInfo("reporting property", TraceLoggingWideString(prop.name));
+                PrintStrings(currentProperty);
+
+                WdfObjectDelete(currentProperty);
+            }
+            else {
+                TraceError("kmdf::AllocAndQueryDeviceProperty failed", TraceLoggingWideString(prop.name), TraceLoggingNTStatus(status));
+            }
+        }
+    }
+
     void Report(const _URB_BULK_OR_INTERRUPT_TRANSFER& transfer)
     {
         const auto flags = transfer.TransferFlags;
@@ -179,6 +226,24 @@ namespace {
         case IOCTL_INTERNAL_USB_SUBMIT_IDLE_NOTIFICATION:
             TraceInfo("IOCTL_INTERNAL_USB_SUBMIT_IDLE_NOTIFICATION");
             break;
+        case IOCTL_INTERNAL_USB_REGISTER_COMPOSITE_DEVICE:
+            TraceInfo("IOCTL_INTERNAL_USB_REGISTER_COMPOSITE_DEVICE");
+            break;
+        case IOCTL_INTERNAL_USB_UNREGISTER_COMPOSITE_DEVICE:
+            TraceInfo("IOCTL_INTERNAL_USB_UNREGISTER_COMPOSITE_DEVICE");
+            break;
+        case IOCTL_INTERNAL_USB_REQUEST_REMOTE_WAKE_NOTIFICATION:
+            TraceInfo("IOCTL_INTERNAL_USB_REQUEST_REMOTE_WAKE_NOTIFICATION");
+            break;
+        case IOCTL_ACPI_ENUM_CHILDREN:
+            TraceInfo("IOCTL_ACPI_ENUM_CHILDREN");
+            break;
+        case IOCTL_ACPI_EVAL_METHOD_EX:
+            TraceInfo("IOCTL_ACPI_EVAL_METHOD_EX");
+            break;
+        case IOCTL_INTERNAL_USB_GET_TOPOLOGY_ADDRESS:
+            TraceInfo("IOCTL_INTERNAL_USB_GET_TOPOLOGY_ADDRESS");
+            break;
         default:
             TraceInfo("internal ioctl", TraceLoggingHexULong(code));
         }
@@ -210,13 +275,15 @@ NTSTATUS AddDevice([[maybe_unused]] WDFDRIVER driver, PWDFDEVICE_INIT deviceInit
         return status;
     }
 
-    const auto busType = GetDeviceBus(filterDevice);
-    if (busType != GUID_BUS_TYPE_USB) {
+    Report(filterDevice);
 
-        TraceInfo("do not attach", TraceLoggingValue(busType));
-        return STATUS_FLT_DO_NOT_ATTACH;
-    }
-    TraceInfo("root BTH device");
+    //const auto busType = GetDeviceBus(filterDevice);
+    //if (busType != GUID_BUS_TYPE_USB) {
+
+    //    TraceInfo("do not attach", TraceLoggingValue(busType));
+    //    return STATUS_FLT_DO_NOT_ATTACH;
+    //}
+    //TraceInfo("root BTH device");
 
     auto queueConfig = kmdf::CreateQueueConfig();
     queueConfig.EvtIoDeviceControl = OnIoctl;

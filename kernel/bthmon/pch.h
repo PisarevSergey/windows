@@ -23,6 +23,8 @@
 #include <usbioctl.h>
 #include <usb.h>
 
+#include <acpiioct.h>
+
 #include "helpers.h"
 #include "filter_device.h"
 #include "driver.h"
