@@ -20,6 +20,9 @@
 #include <devpkey.h>
 #include <devguid.h>
 
+#include <bthdef.h>
+#include <bthioctl.h>
+
 #include <usbioctl.h>
 #include <usb.h>
 

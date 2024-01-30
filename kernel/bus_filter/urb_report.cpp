@@ -72,17 +72,23 @@ namespace {
     }
 
     void Report(const _URB_BULK_OR_INTERRUPT_TRANSFER& urb) {
-        const auto transferFlags = urb.TransferFlags;
 
-        if (flag_on(transferFlags, USBD_TRANSFER_DIRECTION_IN)) {
+        TraceInfo("Pipe handle", TraceLoggingValue(urb.PipeHandle));
+
+        if (flag_on(urb.TransferFlags, USBD_TRANSFER_DIRECTION_IN)) {
             TraceInfo("USBD_TRANSFER_DIRECTION_IN");
         }
         else {
             TraceInfo("USBD_TRANSFER_DIRECTION_OUT");
         }
+
+        TraceInfo("", TraceLoggingValue(urb.TransferBufferLength, "Transfer buffer length"));
     }
 
     void Report(const _URB_CONTROL_TRANSFER& urb) {
+
+        TraceInfo("Pipe handle", TraceLoggingValue(urb.PipeHandle));
+
         const auto transferFlags = urb.TransferFlags;
 
         if (flag_on(transferFlags,USBD_TRANSFER_DIRECTION_IN)) {
@@ -96,16 +102,77 @@ namespace {
             TraceInfo("USBD_DEFAULT_PIPE_TRANSFER");
         }
 
-        TraceInfo("Pipe handle", TraceLoggingValue(urb.PipeHandle));
         TraceInfo("Transfer Buffer Length", TraceLoggingValue(urb.TransferBufferLength));
-        TraceInfo("Transfer buffer", TraceLoggingValue(urb.TransferBuffer));
-        TraceInfo("Trasfer buffer MDL", TraceLoggingPointer(urb.TransferBufferMDL));
-        TraceInfo("USB request setup packet", TraceLoggingBinary(urb.SetupPacket, sizeof(urb.SetupPacket)));
+        //TraceInfo("Transfer buffer", TraceLoggingValue(urb.TransferBuffer));
+        //TraceInfo("Trasfer buffer MDL", TraceLoggingPointer(urb.TransferBufferMDL));
+        //TraceInfo("USB request setup packet", TraceLoggingBinary(urb.SetupPacket, sizeof(urb.SetupPacket)));
 
-        if (urb.TransferBufferLength && urb.TransferBuffer)
-        {
-            TraceInfo("Control Transfer Buffer", TraceLoggingBinary(urb.TransferBuffer, urb.TransferBufferLength));
+        //if (urb.TransferBufferLength && urb.TransferBuffer)
+        //{
+        //    TraceInfo("Control Transfer Buffer", TraceLoggingBinary(urb.TransferBuffer, urb.TransferBufferLength));
+        //}
+    }
+
+    const char* getDescriptorName(UCHAR descriptorType) {
+
+        switch (descriptorType) {
+            case USB_DEVICE_DESCRIPTOR_TYPE: return "USB_DEVICE_DESCRIPTOR_TYPE";
+            case USB_CONFIGURATION_DESCRIPTOR_TYPE: return "USB_CONFIGURATION_DESCRIPTOR_TYPE";
+            case USB_STRING_DESCRIPTOR_TYPE: return "USB_STRING_DESCRIPTOR_TYPE";
+            case USB_INTERFACE_DESCRIPTOR_TYPE: return "USB_INTERFACE_DESCRIPTOR_TYPE";
+            case USB_ENDPOINT_DESCRIPTOR_TYPE: return "USB_ENDPOINT_DESCRIPTOR_TYPE";
+            case USB_DEVICE_QUALIFIER_DESCRIPTOR_TYPE: return "USB_DEVICE_QUALIFIER_DESCRIPTOR_TYPE";
+            case USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_TYPE: return "USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_TYPE";
+            case USB_INTERFACE_POWER_DESCRIPTOR_TYPE: return "USB_INTERFACE_POWER_DESCRIPTOR_TYPE";
+            case USB_OTG_DESCRIPTOR_TYPE: return "USB_OTG_DESCRIPTOR_TYPE";
+            case USB_DEBUG_DESCRIPTOR_TYPE: return "USB_DEBUG_DESCRIPTOR_TYPE";
+            case USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE: return "USB_INTERFACE_ASSOCIATION_DESCRIPTOR_TYPE";
+            case USB_BOS_DESCRIPTOR_TYPE: return "USB_BOS_DESCRIPTOR_TYPE";
+            case USB_DEVICE_CAPABILITY_DESCRIPTOR_TYPE: return "USB_DEVICE_CAPABILITY_DESCRIPTOR_TYPE";
+            case USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR_TYPE: return "USB_SUPERSPEED_ENDPOINT_COMPANION_DESCRIPTOR_TYPE";
+            case USB_SUPERSPEEDPLUS_ISOCH_ENDPOINT_COMPANION_DESCRIPTOR_TYPE: return "USB_SUPERSPEEDPLUS_ISOCH_ENDPOINT_COMPANION_DESCRIPTOR_TYPE";
+            default: return "unknown descriptor type";
         }
+    }
+
+    void Report(const _URB_CONTROL_DESCRIPTOR_REQUEST& urb) {
+        TraceInfo("", TraceLoggingValue(urb.Index, "Descriptor index"));
+        TraceInfo("", TraceLoggingString(getDescriptorName(urb.DescriptorType), "Descriptor type"));
+    }
+
+    void Report(const _URB_CONTROL_GET_STATUS_REQUEST& urb) {
+        TraceInfo("", TraceLoggingValue(urb.Index, "Index"));
+    }
+
+    void Report(const USB_CONFIGURATION_DESCRIPTOR& confDescriptor) {
+
+        TraceInfo("", TraceLoggingValue(confDescriptor.bLength));
+
+        NT_ASSERT(confDescriptor.bDescriptorType == USB_CONFIGURATION_DESCRIPTOR_TYPE);
+
+        TraceInfo("", TraceLoggingValue(confDescriptor.wTotalLength));
+
+        TraceInfo("", TraceLoggingValue(confDescriptor.bNumInterfaces, "total number of interfaces supported by configuration"));
+
+        TraceInfo("", TraceLoggingValue(confDescriptor.bConfigurationValue));
+
+        TraceInfo("", TraceLoggingValue(confDescriptor.iConfiguration));
+
+        TraceInfo("", TraceLoggingValue(confDescriptor.bmAttributes));
+
+        TraceInfo("", TraceLoggingValue(confDescriptor.MaxPower));
+    }
+
+    void Report(const _URB_SELECT_CONFIGURATION& urb) {
+
+        if (urb.ConfigurationDescriptor == nullptr) {
+            TraceInfo("device will be set to an unconfigured state");
+            return;
+        }
+
+        Report(*urb.ConfigurationDescriptor);
+
+        TraceInfo("", TraceLoggingValue(urb.ConfigurationHandle));
     }
 }
 
@@ -119,6 +186,15 @@ void Report(const URB& urb)
         break;
     case URB_FUNCTION_CONTROL_TRANSFER:
         Report(reinterpret_cast<const _URB_CONTROL_TRANSFER&>(urb));
+        break;
+    case URB_FUNCTION_GET_DESCRIPTOR_FROM_DEVICE:
+        Report(reinterpret_cast<const _URB_CONTROL_DESCRIPTOR_REQUEST&>(urb));
+        break;
+    case URB_FUNCTION_GET_STATUS_FROM_DEVICE:
+        Report(reinterpret_cast<const _URB_CONTROL_GET_STATUS_REQUEST&>(urb));
+        break;
+    case URB_FUNCTION_SELECT_CONFIGURATION:
+        Report(reinterpret_cast<const _URB_SELECT_CONFIGURATION&>(urb));
         break;
     }
 }

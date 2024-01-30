@@ -149,6 +149,8 @@ namespace {
 
     void Report(const _URB_BULK_OR_INTERRUPT_TRANSFER& transfer)
     {
+        TraceInfo("pipe", TraceLoggingPointer(transfer.PipeHandle));
+
         const auto flags = transfer.TransferFlags;
         if (flags & USBD_TRANSFER_DIRECTION_IN) {
             TraceInfo("USBD_TRANSFER_DIRECTION_IN");
@@ -174,8 +176,9 @@ namespace {
     }
 
     void Report(const _URB_HEADER& urbHeader) {
-        TraceInfo("Length", TraceLoggingValue(urbHeader.Length));
+
         TraceInfo("URB function", TraceLoggingHexUInt16(urbHeader.Function), TraceLoggingValue(UsbFunctionString(urbHeader.Function)));
+        TraceInfo("Length", TraceLoggingValue(urbHeader.Length));
 
         switch (urbHeader.Function) {
         case URB_FUNCTION_BULK_OR_INTERRUPT_TRANSFER:
@@ -208,6 +211,15 @@ namespace {
             break;
         case IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION:
             TraceInfo("IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
+            break;
+        case IOCTL_BTH_SDP_SUBMIT_RECORD_WITH_INFO:
+            TraceInfo("IOCTL_BTH_SDP_SUBMIT_RECORD_WITH_INFO", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
+            break;
+        case IOCTL_BTH_GET_LOCAL_INFO:
+            TraceInfo("IOCTL_BTH_GET_LOCAL_INFO", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
+            break;
+        case IOCTL_ACPI_EVAL_METHOD:
+            TraceInfo("IOCTL_ACPI_EVAL_METHOD", TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
             break;
         default:
             TraceInfo("ioctl", TraceLoggingHexULong(IoControlCode), TraceLoggingPointer(WdfIoQueueGetDevice(queue), "device"));
@@ -286,15 +298,15 @@ NTSTATUS AddDevice([[maybe_unused]] WDFDRIVER driver, PWDFDEVICE_INIT deviceInit
         return status;
     }
 
-    Report(filterDevice);
+    const auto busType = GetDeviceBus(filterDevice);
+    if (busType != GUID_BUS_TYPE_USB) {
 
-    //const auto busType = GetDeviceBus(filterDevice);
-    //if (busType != GUID_BUS_TYPE_USB) {
-
-    //    TraceInfo("do not attach", TraceLoggingValue(busType));
-    //    return STATUS_FLT_DO_NOT_ATTACH;
-    //}
+        TraceInfo("do not attach", TraceLoggingValue(busType));
+        return STATUS_FLT_DO_NOT_ATTACH;
+    }
     //TraceInfo("root BTH device");
+
+    Report(filterDevice);
 
     auto queueConfig = kmdf::CreateQueueConfig();
     queueConfig.EvtIoDeviceControl = OnIoctl;
