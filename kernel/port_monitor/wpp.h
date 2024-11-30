@@ -14,4 +14,5 @@
 
 // begin_wpp config
 // FUNC info{LEVEL=TRACE_LEVEL_INFORMATION}(FLAGS,MSG, ...);
+// FUNC error{LEVEL=TRACE_LEVEL_INFORMATION}(FLAGS,MSG, ...);
 // end_wpp

@@ -1,6 +1,7 @@
 #pragma once
 
-#include <ntddk.h>
+#include <kmdf/driver.h>
+#include <kmdf/object.h>
 
 #include "driver.h"
 

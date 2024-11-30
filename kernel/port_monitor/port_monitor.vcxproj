@@ -100,7 +100,12 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WppEnabled>true</WppEnabled>
       <WppScanConfigurationData>wpp.h</WppScanConfigurationData>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(ProjectDir)..\helpers\;</AdditionalIncludeDirectories>
     </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib\$(PlatformShortName)\$(ConfigurationName)\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies);$(KernelBufferOverflowLib);$(DDK_LIB_PATH)ntoskrnl.lib;$(DDK_LIB_PATH)hal.lib;$(DDK_LIB_PATH)wmilib.lib;$(KMDF_LIB_PATH)$(KMDF_VER_PATH)\WdfLdr.lib;$(KMDF_LIB_PATH)$(KMDF_VER_PATH)\WdfDriverEntry.lib;kmdf.lib;</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <DriverSign>
@@ -112,7 +117,12 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WppEnabled>true</WppEnabled>
       <WppScanConfigurationData>wpp.h</WppScanConfigurationData>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(ProjectDir)..\helpers\;</AdditionalIncludeDirectories>
     </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib\$(PlatformShortName)\$(ConfigurationName)\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies);$(KernelBufferOverflowLib);$(DDK_LIB_PATH)ntoskrnl.lib;$(DDK_LIB_PATH)hal.lib;$(DDK_LIB_PATH)wmilib.lib;$(KMDF_LIB_PATH)$(KMDF_VER_PATH)\WdfLdr.lib;$(KMDF_LIB_PATH)$(KMDF_VER_PATH)\WdfDriverEntry.lib;kmdf.lib;</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <DriverSign>
@@ -124,7 +134,12 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WppEnabled>true</WppEnabled>
       <WppScanConfigurationData>wpp.h</WppScanConfigurationData>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(ProjectDir)..\helpers\;</AdditionalIncludeDirectories>
     </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib\$(PlatformShortName)\$(ConfigurationName)\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies);$(KernelBufferOverflowLib);$(DDK_LIB_PATH)ntoskrnl.lib;$(DDK_LIB_PATH)hal.lib;$(DDK_LIB_PATH)wmilib.lib;$(KMDF_LIB_PATH)$(KMDF_VER_PATH)\WdfLdr.lib;$(KMDF_LIB_PATH)$(KMDF_VER_PATH)\WdfDriverEntry.lib;kmdf.lib;</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <DriverSign>
@@ -136,7 +151,12 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <WppEnabled>true</WppEnabled>
       <WppScanConfigurationData>wpp.h</WppScanConfigurationData>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories);$(ProjectDir)..\helpers\;</AdditionalIncludeDirectories>
     </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(SolutionDir)lib\$(PlatformShortName)\$(ConfigurationName)\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>%(AdditionalDependencies);$(KernelBufferOverflowLib);$(DDK_LIB_PATH)ntoskrnl.lib;$(DDK_LIB_PATH)hal.lib;$(DDK_LIB_PATH)wmilib.lib;$(KMDF_LIB_PATH)$(KMDF_VER_PATH)\WdfLdr.lib;$(KMDF_LIB_PATH)$(KMDF_VER_PATH)\WdfDriverEntry.lib;kmdf.lib;</AdditionalDependencies>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <Inf Include="port_monitor.inf" />

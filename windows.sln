@@ -47,6 +47,9 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fosw", "kernel\fosw\fosw.vc
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "port_monitor", "kernel\port_monitor\port_monitor.vcxproj", "{87AAEAC9-3E12-4D6B-B6EF-7BE103E1C8ED}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5A801C19-739E-4101-8D57-97FFD5D5996A} = {5A801C19-739E-4101-8D57-97FFD5D5996A}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
