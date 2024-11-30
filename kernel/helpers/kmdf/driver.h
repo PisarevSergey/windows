@@ -8,5 +8,6 @@
 #pragma warning(pop)
 
 namespace kmdf {
+    [[nodiscard]]
     WDF_DRIVER_CONFIG CreateDriverConfig(PFN_WDF_DRIVER_UNLOAD unload = nullptr, PFN_WDF_DRIVER_DEVICE_ADD addDevice = nullptr);
 }

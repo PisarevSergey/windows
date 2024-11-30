@@ -28,6 +28,7 @@ namespace kcpp
     };
 
     template <typename T>
+    [[nodiscard]]
     auto make_scope_guard(T&& releaser) {
         return scope_guard{static_cast<T&&>(releaser)};
     }

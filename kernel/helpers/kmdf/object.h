@@ -8,5 +8,6 @@
 #pragma warning(pop)
 
 namespace kmdf {
+    [[nodiscard]]
     WDF_OBJECT_ATTRIBUTES CreateObjectAttributes(WDFOBJECT parent = nullptr, PFN_WDF_OBJECT_CONTEXT_CLEANUP cleanup = nullptr);
 }
