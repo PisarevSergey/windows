@@ -1,0 +1,96 @@
+[Version]
+Signature   = "$Windows NT$"
+Class       = WFPCALLOUTS
+ClassGuid   = {57465043-616C-6C6F-7574-5F636C617373}
+Provider    = %ProviderString%
+DriverVer   =
+CatalogFile = port_monitor.cat
+PnpLockdown = 1
+
+[SourceDisksFiles]
+port_monitor.sys = 1,,
+
+[SourceDisksNames]
+1 = %DiskId1%,,,
+
+[DestinationDirs]
+PortMonitorDownlevel.CopyDriverFiles  = 12            ;%windir%\system32\drivers
+PortMonitorDownlevel.DelDriverFiles   = 12            ;%windir%\system32\drivers
+PortMonitor.DriverFiles               = 13            ;driver store
+
+;;
+;; Default install sections
+;;
+
+[DefaultInstall.NT$ARCH$.10.0...25952]
+OptionDesc          = %ServiceDescription%
+CopyFiles           = PortMonitor.DriverFiles
+
+[DefaultInstall.NT$ARCH$.10.0...25952.Services]
+AddService          = %ServiceName%,,PortMonitor.Service
+
+;
+; Support sections
+;
+
+[PortMonitor.Service]
+DisplayName      = %ServiceName%
+Description      = %ServiceDescription%
+ServiceBinary    = %13%\%DriverName%.sys        ;driver store
+ServiceType      = 1                            ;SERVICE_KERNEL_DRIVER
+StartType        = 3                            ;SERVICE_DEMAND_START
+ErrorControl     = 1                            ;SERVICE_ERROR_NORMAL
+
+[PortMonitor.DriverFiles]
+%DriverName%.sys
+
+;;
+;; Downlevel default install sections
+;;
+
+[DefaultInstall.NT$ARCH$]
+OptionDesc          = %ServiceDescription%
+CopyFiles           = PortMonitorDownlevel.CopyDriverFiles
+
+[DefaultInstall.NT$ARCH$.Services]
+AddService          = %ServiceName%,,PortMonitorDownlevel.Service
+
+;;
+;; Downlevel default uninstall sections
+;;
+
+[DefaultUninstall.NT$ARCH$]
+LegacyUninstall = 1
+DelFiles        = PortMonitorDownlevel.DelDriverFiles
+
+[DefaultUninstall.NT$ARCH$.Services]
+DelService      = %ServiceName%,0x200      ;Ensure service is stopped before deleting
+
+;
+; Downlevel support sections
+;
+
+[PortMonitorDownlevel.Service]
+DisplayName      = %ServiceName%
+Description      = %ServiceDescription%
+ServiceBinary    = %12%\%DriverName%.sys        ;%windir%\system32\drivers\
+ServiceType      = 1                            ;SERVICE_KERNEL_DRIVER
+StartType        = 3                            ;SERVICE_DEMAND_START
+ErrorControl     = 1                            ;SERVICE_ERROR_NORMAL
+
+[PortMonitorDownlevel.CopyDriverFiles]
+%DriverName%.sys
+
+[PortMonitorDownlevel.DelDriverFiles]
+%DriverName%.sys
+
+;;
+;; String Section
+;;
+
+[Strings]
+ProviderString          = "ps"
+ServiceDescription      = "Port Monitor Driver"
+ServiceName             = "port_monitor"
+DriverName              = "port_monitor"
+DiskId1                 = "Port Monitor Installation Disk"
