@@ -3,60 +3,98 @@
 ;
 
 [Version]
-Signature   = "$WINDOWS NT$"
-Class       = System ; TODO: specify appropriate Class
-ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318} ; TODO: specify appropriate ClassGuid
-Provider    = %ManufacturerName%
+Signature   = "$Windows NT$"
+Class       = System
+ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318}
+Provider    = %ProviderString%
+DriverVer   =
 CatalogFile = process_monitor.cat
-DriverVer   = ; TODO: set DriverVer in stampinf property pages
 PnpLockdown = 1
-
-[DestinationDirs]
-DefaultDestDir = 13
-
-[SourceDisksNames]
-1 = %DiskName%,,,""
 
 [SourceDisksFiles]
 process_monitor.sys = 1,,
 
-;*****************************************
-; Install Section
-;*****************************************
+[SourceDisksNames]
+1 = %DiskId1%,,,
 
-[Manufacturer]
-%ManufacturerName% = Standard,NT$ARCH$.10.0...16299 ; %13% support introduced in build 16299
+[DestinationDirs]
+ProcessMonitorDownlevel.CopyDriverFiles  = 12            ;%windir%\system32\drivers
+ProcessMonitorDownlevel.DelDriverFiles   = 12            ;%windir%\system32\drivers
+ProcessMonitor.DriverFiles           = 13            ;driver store
 
-[Standard.NT$ARCH$.10.0...16299]
-%process_monitor.DeviceDesc% = process_monitor_Device, Root\process_monitor ; TODO: edit hw-id
+;;
+;; Default install sections
+;;
 
-[process_monitor_Device.NT]
-CopyFiles = File_Copy
+[DefaultInstall.NT$ARCH$.10.0...25952]
+OptionDesc  = %ServiceDescription%
+CopyFiles   = ProcessMonitor.DriverFiles
 
-[File_Copy]
-process_monitor.sys
+[DefaultInstall.NT$ARCH$.10.0...25952.Services]
+AddService  = %ServiceName%,,ProcessMonitor.Service
 
-;-------------- Service installation
-[process_monitor_Device.NT.Services]
-AddService = process_monitor,%SPSVCINST_ASSOCSERVICE%, process_monitor_Service_Inst
+;
+; Support sections
+;
 
-; -------------- process_monitor driver install sections
-[process_monitor_Service_Inst]
-DisplayName    = %process_monitor.SVCDESC%
-ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
-StartType      = 3               ; SERVICE_DEMAND_START
-ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
-ServiceBinary  = %13%\process_monitor.sys
+[ProcessMonitor.Service]
+DisplayName      = %ServiceName%
+Description      = %ServiceDescription%
+ServiceBinary    = %13%\%DriverName%.sys    ;%windir%\system32\drivers\
+ServiceType      = 1                        ;SERVICE_KERNEL_DRIVER
+StartType        = 3                        ;SERVICE_DEMAND_START
+ErrorControl     = 1                        ;SERVICE_ERROR_NORMAL
 
-[process_monitor_Device.NT.Wdf]
-KmdfService = process_monitor, process_monitor_wdfsect
+[ProcessMonitor.DriverFiles]
+%DriverName%.sys
 
-[process_monitor_wdfsect]
-KmdfLibraryVersion = $KMDFVERSION$
+;;
+;; Downlevel default install sections
+;;
+
+[DefaultInstall.NT$ARCH$]
+OptionDesc  = %ServiceDescription%
+CopyFiles   = ProcessMonitorDownlevel.CopyDriverFiles
+
+[DefaultInstall.NT$ARCH$.Services]
+AddService  = %ServiceName%,,ProcessMonitorDownlevel.Service
+
+;;
+;; Downlevel default uninstall sections
+;;
+
+[DefaultUninstall.NT$ARCH$]
+LegacyUninstall = 1
+DelFiles        = ProcessMonitorDownlevel.DelDriverFiles
+
+[DefaultUninstall.NT$ARCH$.Services]
+DelService      = %ServiceName%,0x200      ;Ensure service is stopped before deleting
+
+;
+; Downlevel support sections
+;
+
+[ProcessMonitorDownlevel.Service]
+DisplayName      = %ServiceName%
+Description      = %ServiceDescription%
+ServiceBinary    = %12%\%DriverName%.sys    ;%windir%\system32\drivers\
+ServiceType      = 1                        ;SERVICE_KERNEL_DRIVER
+StartType        = 3                        ;SERVICE_DEMAND_START
+ErrorControl     = 1                        ;SERVICE_ERROR_NORMAL
+
+[ProcessMonitorDownlevel.CopyDriverFiles]
+%DriverName%.sys
+
+[ProcessMonitorDownlevel.DelDriverFiles]
+%DriverName%.sys
+
+;;
+;; String Section
+;;
 
 [Strings]
-SPSVCINST_ASSOCSERVICE = 0x00000002
-ManufacturerName = "<Your manufacturer name>" ;TODO: Replace with your manufacturer name
-DiskName = "process_monitor Installation Disk"
-process_monitor.DeviceDesc = "process_monitor Device"
-process_monitor.SVCDESC = "process_monitor Service"
+ProviderString          = "ps"
+ServiceDescription      = "ProcessMonitor driver"
+ServiceName             = "ProcessMonitor"
+DriverName              = "process_monitor"
+DiskId1                 = "ProcessMonitor Device Installation Disk"
